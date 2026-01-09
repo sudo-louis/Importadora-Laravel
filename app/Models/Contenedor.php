@@ -36,6 +36,17 @@ class Contenedor extends Model
         return $this->hasOne(Liberacion::class, 'contenedor_id');
     }
 
+    public function envioDocumento(): HasOne
+    {
+        return $this->hasOne(EnvioDocumento::class, 'contenedor_id');
+    }
+
+    public function cotizacion(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Cotizacion::class, 'contenedor_id');
+    }
+
+
     public function gastosLiberacion(): HasMany
     {
         return $this->hasMany(Gasto::class, 'contenedor_id')->where('tipo', 'liberacion');

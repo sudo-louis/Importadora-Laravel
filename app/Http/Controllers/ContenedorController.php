@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Contenedor;
+use App\Models\Cotizacion;
+use App\Models\EnvioDocumento;
 use App\Models\Gasto;
 use App\Models\Liberacion;
 use Illuminate\Http\Request;
@@ -62,21 +64,20 @@ class ContenedorController extends Controller
 
     public function show(Request $request, Contenedor $contenedor)
     {
-        $mode = $request->query('mode', 'view'); // view|edit
+        $mode = $request->query('mode', 'view');
         $tab  = $request->query('tab', 'registro');
 
         $contenedor->loadMissing([
             'creador',
             'liberacion',
             'gastosLiberacion',
+            'envioDocumento',
+            'cotizacion',
         ]);
 
         return view('contenedores.show', compact('contenedor', 'mode', 'tab'));
     }
 
-    /**
-     * Guarda pestaña: Liberación + gastos adicionales.
-     */
     public function updateLiberacion(Request $request, Contenedor $contenedor)
     {
         $data = $request->validate([
@@ -105,23 +106,15 @@ class ContenedorController extends Controller
             'gastos.*.monto' => ['nullable','numeric','min:0'],
         ]);
 
-        // Normaliza checkbox
         $data['revalidacion'] = (bool) ($request->input('revalidacion', false));
-
-        // Si no hay revalidación, borra fecha_revalidacion
-        if (!$data['revalidacion']) {
-            $data['fecha_revalidacion'] = null;
-        }
+        if (!$data['revalidacion']) $data['fecha_revalidacion'] = null;
 
         DB::transaction(function () use ($contenedor, $data) {
-
-            // Upsert liberación
             $libData = collect($data)->except('gastos')->toArray();
             $lib = $contenedor->liberacion ?: new Liberacion(['contenedor_id' => $contenedor->id]);
             $lib->fill($libData);
             $lib->save();
 
-            // Reemplaza gastos tipo liberacion
             $contenedor->gastosLiberacion()->delete();
 
             $gastos = $data['gastos'] ?? [];
@@ -129,7 +122,6 @@ class ContenedorController extends Controller
                 $desc = trim((string)($g['descripcion'] ?? ''));
                 $monto = $g['monto'] ?? null;
 
-                // evita guardar filas vacías
                 if ($desc === '' && ($monto === null || $monto === '')) continue;
 
                 Gasto::create([
@@ -146,18 +138,68 @@ class ContenedorController extends Controller
             ->with('success', 'Liberación actualizada');
     }
 
-    public function update(Request $request, Contenedor $contenedor)
+    public function updateEnvioDocumentos(Request $request, Contenedor $contenedor)
     {
+        $data = $request->validate([
+            'enviado' => ['nullable','boolean'],
+            'fecha_envio' => ['nullable','date'],
+        ]);
+
+        $enviado = (bool) ($request->input('enviado', false));
+
+        if (!$enviado) {
+            $data['fecha_envio'] = null;
+        } else {
+            if (empty($data['fecha_envio'])) {
+                $data['fecha_envio'] = now()->toDateString();
+            }
+        }
+
+        $doc = $contenedor->envioDocumento ?: new EnvioDocumento(['contenedor_id' => $contenedor->id]);
+        $doc->fill([
+            'enviado' => $enviado,
+            'fecha_envio' => $data['fecha_envio'] ?? null,
+        ]);
+        $doc->save();
+
         return redirect()
-            ->route('contenedores.show', $contenedor);
+            ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'docs'])
+            ->with('success', 'Envío de documentos actualizado');
     }
 
-    public function destroy(Contenedor $contenedor)
+    public function updateCotizacion(Request $request, Contenedor $contenedor)
     {
-        $contenedor->delete();
+        $data = $request->validate([
+            'fecha_pago' => ['nullable', 'date'],
+            'impuestos' => ['nullable', 'numeric', 'min:0'],
+            'honorarios' => ['nullable', 'numeric', 'min:0'],
+            'maniobras' => ['nullable', 'numeric', 'min:0'],
+            'almacenaje' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $impuestos  = (float) ($data['impuestos'] ?? 0);
+        $honorarios = (float) ($data['honorarios'] ?? 0);
+        $maniobras  = (float) ($data['maniobras'] ?? 0);
+        $almacenaje = (float) ($data['almacenaje'] ?? 0);
+
+        // OJO: 'total' es columna generada en MySQL -> NO se guarda desde Laravel
+        $cot = $contenedor->cotizacion ?: new Cotizacion(['contenedor_id' => $contenedor->id]);
+
+        $cot->fill([
+            'fecha_pago' => $data['fecha_pago'] ?? null,
+            'impuestos' => $impuestos,
+            'honorarios' => $honorarios,
+            'maniobras' => $maniobras,
+            'almacenaje' => $almacenaje,
+        ]);
+
+        $cot->save();
+
+        // refresca el modelo para que venga el total generado desde DB
+        $cot->refresh();
 
         return redirect()
-            ->route('contenedores.index')
-            ->with('success', 'Contenedor eliminado');
+            ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'cotizacion'])
+            ->with('success', 'Cotización actualizada');
     }
 }
