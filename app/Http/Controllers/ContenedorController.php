@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Contenedor;
 use App\Models\Cotizacion;
+use App\Models\Despacho; // ✅ NUEVO
 use App\Models\EnvioDocumento;
 use App\Models\Gasto;
 use App\Models\Liberacion;
@@ -73,6 +74,7 @@ class ContenedorController extends Controller
             'gastosLiberacion',
             'envioDocumento',
             'cotizacion',
+            'despacho', // ✅ NUEVO
         ]);
 
         return view('contenedores.show', compact('contenedor', 'mode', 'tab'));
@@ -194,12 +196,38 @@ class ContenedorController extends Controller
         ]);
 
         $cot->save();
-
-        // refresca el modelo para que venga el total generado desde DB
         $cot->refresh();
 
         return redirect()
             ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'cotizacion'])
             ->with('success', 'Cotización actualizada');
+    }
+
+    /**
+     * ✅ NUEVO: Guarda pestaña Despacho
+     */
+    public function updateDespacho(Request $request, Contenedor $contenedor)
+    {
+        $data = $request->validate([
+            'numero_pedimento' => ['nullable','string','max:255'],
+            'clave_pedimento'  => ['nullable','string','max:10'],
+            'importador'       => ['nullable','string','max:255'],
+
+            'tipo_carga' => ['nullable','in:terrestre,maritimo,ferrocarril,aereo'],
+
+            'fecha_carga'             => ['nullable','date'],
+            'reconocimiento_aduanero' => ['nullable','date'],
+            'fecha_pago'              => ['nullable','date'],
+            'fecha_modulacion'        => ['nullable','date'],
+            'fecha_entrega'           => ['nullable','date'],
+        ]);
+
+        $despacho = $contenedor->despacho ?: new Despacho(['contenedor_id' => $contenedor->id]);
+        $despacho->fill($data);
+        $despacho->save();
+
+        return redirect()
+            ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'despacho'])
+            ->with('success', 'Despacho actualizado');
     }
 }

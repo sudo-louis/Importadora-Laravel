@@ -47,6 +47,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('contenedores/{contenedor}/envio-documentos', [ContenedorController::class, 'updateEnvioDocumentos'])
     ->name('contenedores.docs.update');
 
+    Route::put('/contenedores/{contenedor}/despacho', [ContenedorController::class, 'updateDespacho'])
+    ->name('contenedores.despacho.update');
     
     Route::put('contenedores/{contenedor}/cotizacion', [ContenedorController::class, 'updateCotizacion'])
     ->name('contenedores.cotizacion.update');

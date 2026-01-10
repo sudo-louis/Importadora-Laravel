@@ -26,8 +26,11 @@
 
     $doc = $contenedor->envioDocumento;
 
-    // NUEVO: cotización (si no existe, será null)
+    // cotización (si no existe, será null)
     $cot = $contenedor->cotizacion ?? null;
+
+    // NUEVO: despacho (si no existe, será null)
+    $des = $contenedor->despacho ?? null;
 @endphp
 
 <x-app-layout>
@@ -80,8 +83,13 @@
                             💾 Guardar Cambios
                         </button>
                     @elseif($activeTab === 'cotizacion')
-                        {{-- NUEVO --}}
                         <button type="submit" form="form-cotizacion"
+                                class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold inline-flex items-center gap-2">
+                            💾 Guardar Cambios
+                        </button>
+                    @elseif($activeTab === 'despacho')
+                        {{-- NUEVO --}}
+                        <button type="submit" form="form-despacho"
                                 class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold inline-flex items-center gap-2">
                             💾 Guardar Cambios
                         </button>
@@ -443,7 +451,7 @@
                 @endif
             @endif
 
-            {{-- ✅ COTIZACIÓN AGENCIA (NUEVO CRUD EN ESTA PESTAÑA) --}}
+            {{-- ✅ COTIZACIÓN AGENCIA --}}
             @if($activeTab === 'cotizacion')
                 @php
                     $canEdit = $isEdit;
@@ -469,7 +477,6 @@
                     @csrf
                     @method('PUT')
 
-                    {{-- Fecha Pago --}}
                     <div class="max-w-md">
                         <label class="{{ $fieldLabel }}">Fecha de Pago de Cotización</label>
                         <input type="date"
@@ -479,9 +486,7 @@
                                {{ $canEdit ? '' : 'disabled' }}>
                     </div>
 
-                    {{-- Cards --}}
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        {{-- Impuestos --}}
                         <div class="p-5 rounded-2xl border border-slate-700 bg-slate-800/30">
                             <div class="flex items-center gap-2 text-gray-200 font-semibold">
                                 <span class="text-red-500">🧾</span> Impuestos
@@ -501,7 +506,6 @@
                             @endif
                         </div>
 
-                        {{-- Almacenajes --}}
                         <div class="p-5 rounded-2xl border border-slate-700 bg-slate-800/30">
                             <div class="flex items-center gap-2 text-gray-200 font-semibold">
                                 <span class="text-orange-500">📦</span> Almacenajes
@@ -521,7 +525,6 @@
                             @endif
                         </div>
 
-                        {{-- Maniobras --}}
                         <div class="p-5 rounded-2xl border border-slate-700 bg-slate-800/30">
                             <div class="flex items-center gap-2 text-gray-200 font-semibold">
                                 <span class="text-blue-500">🛠️</span> Maniobras
@@ -541,7 +544,6 @@
                             @endif
                         </div>
 
-                        {{-- Honorarios --}}
                         <div class="p-5 rounded-2xl border border-slate-700 bg-slate-800/30">
                             <div class="flex items-center gap-2 text-gray-200 font-semibold">
                                 <span class="text-purple-500">🎁</span> Honorarios
@@ -562,7 +564,6 @@
                         </div>
                     </div>
 
-                    {{-- Total --}}
                     <div class="p-6 rounded-2xl border border-blue-700 bg-blue-600/10">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-3">
@@ -576,7 +577,6 @@
                         </div>
                     </div>
 
-                    {{-- Botón interno por si el usuario no usa el botón superior --}}
                     @if($canEdit)
                         <button type="submit"
                                 class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
@@ -607,8 +607,254 @@
                 </script>
             @endif
 
+            {{-- ✅ DESPACHO (NUEVO) --}}
+            @if($activeTab === 'despacho')
+                @php
+                    $canEdit = $isEdit;
+
+                    // view data
+                    $noPed = $des?->numero_pedimento ?? null;
+                    $clavePed = $des?->clave_pedimento ?? null;
+                    $importador = $des?->importador ?? $contenedor->cliente;
+
+                    // edit values (old() first)
+                    $vNumeroPed = old('numero_pedimento', $des?->numero_pedimento);
+                    $vClavePed  = old('clave_pedimento', $des?->clave_pedimento);
+                    $vImportador = old('importador', $des?->importador ?? $contenedor->cliente);
+
+                    $vTipoCarga = old('tipo_carga', $des?->tipo_carga);
+
+                    $vFechaCarga = old('fecha_carga', optional($des?->fecha_carga)->format('Y-m-d'));
+                    $vFechaRecon = old('reconocimiento_aduanero', optional($des?->reconocimiento_aduanero)->format('Y-m-d'));
+                    $vFechaPago  = old('fecha_pago', optional($des?->fecha_pago)->format('Y-m-d'));
+                    $vFechaMod   = old('fecha_modulacion', optional($des?->fecha_modulacion)->format('Y-m-d'));
+                    $vFechaEntrega = old('fecha_entrega', optional($des?->fecha_entrega)->format('Y-m-d'));
+
+                    $card = "p-5 rounded-2xl border border-slate-700 bg-slate-800/30";
+                    $miniLabel = "text-sm text-gray-400";
+                    $miniVal = "mt-2 text-lg font-semibold text-white";
+                @endphp
+
+                @if(!$canEdit)
+                    {{-- VIEW (como tu referencia) --}}
+                    <div class="space-y-6">
+                        <div class="rounded-2xl border border-slate-700 bg-slate-800/20 p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-2xl">
+                                    🚚
+                                </div>
+
+                                <div>
+                                    <div class="text-white font-extrabold text-lg">Información de Despacho</div>
+                                    <div class="text-gray-400 text-sm">Seguimiento del proceso de importación</div>
+                                </div>
+                            </div>
+
+                            {{-- Pedimento --}}
+                            <div class="mt-6 rounded-2xl border border-slate-700 bg-gradient-to-r from-indigo-600/20 to-purple-600/20 p-6">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white">
+                                        📄
+                                    </div>
+
+                                    <div class="flex-1">
+                                        <div class="text-white font-extrabold">Pedimento Aduanal</div>
+                                        <div class="text-gray-300 text-sm">Información oficial de importación</div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    <div class="{{ $card }}">
+                                        <div class="flex items-center gap-2 text-gray-200 font-semibold">
+                                            <span class="text-blue-400">🧾</span>
+                                            Número de Pedimento
+                                        </div>
+                                        <div class="{{ $miniVal }}">
+                                            {{ $noPed ?: '—' }}
+                                        </div>
+                                    </div>
+
+                                    <div class="{{ $card }}">
+                                        <div class="flex items-center gap-2 text-gray-200 font-semibold">
+                                            <span class="text-purple-400">🔑</span>
+                                            Clave de Pedimento
+                                        </div>
+                                        <div class="{{ $miniVal }}">
+                                            {{ $clavePed ?: '—' }}
+                                        </div>
+                                    </div>
+
+                                    <div class="{{ $card }}">
+                                        <div class="flex items-center gap-2 text-gray-200 font-semibold">
+                                            <span class="text-green-400">👤</span>
+                                            Importador
+                                        </div>
+                                        <div class="{{ $miniVal }}">
+                                            {{ $importador ?: '—' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Proceso (timeline simple como tu mock) --}}
+                        <div class="rounded-2xl border border-slate-700 bg-slate-800/20 p-6">
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-orange-400 text-xl">🕒</span>
+                                <div class="text-white font-extrabold">Proceso de Despacho</div>
+                            </div>
+
+                            @php
+                                $steps = [
+                                    [
+                                        'title' => 'Tipo de Carga',
+                                        'sub' => 'Método de transporte',
+                                        'icon' => '🚛',
+                                        'badge' => $des?->tipo_carga ? strtoupper($des->tipo_carga) : null,
+                                        'date' => $des?->fecha_carga ? $des->fecha_carga->format('Y-m-d') : null,
+                                    ],
+                                    [
+                                        'title' => 'Reconocimiento Aduanero',
+                                        'sub' => 'Inspección de mercancía',
+                                        'icon' => '🔎',
+                                        'date' => $des?->reconocimiento_aduanero ? $des->reconocimiento_aduanero->format('Y-m-d') : null,
+                                    ],
+                                    [
+                                        'title' => 'Modulación',
+                                        'sub' => 'Revisión automatizada',
+                                        'icon' => '🧠',
+                                        'date' => $des?->fecha_modulacion ? $des->fecha_modulacion->format('Y-m-d') : null,
+                                    ],
+                                    [
+                                        'title' => 'Entrega Final',
+                                        'sub' => 'Mercancía entregada',
+                                        'icon' => '✅',
+                                        'date' => $des?->fecha_entrega ? $des->fecha_entrega->format('Y-m-d') : null,
+                                        'highlight' => true,
+                                    ],
+                                ];
+                            @endphp
+
+                            <div class="space-y-3">
+                                @foreach($steps as $st)
+                                    <div class="rounded-2xl border border-slate-700 bg-slate-800/30 p-5 flex items-center justify-between">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-10 h-10 rounded-2xl bg-slate-900/60 border border-slate-700 flex items-center justify-center">
+                                                <span class="text-xl">{{ $st['icon'] }}</span>
+                                            </div>
+
+                                            <div>
+                                                <div class="text-white font-extrabold">{{ $st['title'] }}</div>
+                                                <div class="text-gray-400 text-sm">{{ $st['sub'] }}</div>
+
+                                                <div class="mt-2 text-sm text-gray-300">
+                                                    📅 {{ $st['date'] ?: '—' }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-3">
+                                            @if(!empty($st['badge']))
+                                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-teal-50/10 border border-teal-200/30 text-teal-300">
+                                                    {{ $st['badge'] }}
+                                                </span>
+                                            @endif
+
+                                            @if(!empty($st['highlight']) && $st['date'])
+                                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-green-50/10 border border-green-200/30 text-green-300">
+                                                    COMPLETADO
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    {{-- EDIT (form como tu referencia) --}}
+                    <form id="form-despacho"
+                          method="POST"
+                          action="{{ route('contenedores.despacho.update', ['contenedor' => $contenedor->id]) }}"
+                          class="space-y-6">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="rounded-2xl border border-slate-700 bg-slate-800/20 p-6">
+                            <div class="text-white font-extrabold text-lg mb-6">Despacho</div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="{{ $fieldLabel }}">No. Pedimento</label>
+                                    <input name="numero_pedimento" value="{{ $vNumeroPed }}"
+                                           class="{{ $inputClass }}"
+                                           placeholder="Ej: 12-34-5678-9012345">
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Clave de Pedimento</label>
+                                    <select name="clave_pedimento" class="{{ $inputClass }}">
+                                        <option value="">Seleccione una clave</option>
+                                        @foreach(['A1','A3','C1','F4','G1'] as $k)
+                                            <option value="{{ $k }}" @selected($vClavePed === $k)>{{ $k }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Importador</label>
+                                    <input name="importador" value="{{ $vImportador }}"
+                                           class="{{ $inputClass }}"
+                                           placeholder="Nombre del importador">
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Tipo de Carga</label>
+                                    <select name="tipo_carga" class="{{ $inputClass }}">
+                                        <option value="">Seleccione tipo de carga</option>
+                                        @foreach(['terrestre','maritimo','ferrocarril','aereo'] as $t)
+                                            <option value="{{ $t }}" @selected($vTipoCarga === $t)>{{ ucfirst($t) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Fecha de Carga</label>
+                                    <input type="date" name="fecha_carga" value="{{ $vFechaCarga }}" class="{{ $inputClass }}">
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Reconocimiento Aduanero Fecha</label>
+                                    <input type="date" name="reconocimiento_aduanero" value="{{ $vFechaRecon }}" class="{{ $inputClass }}">
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Fecha de Pago</label>
+                                    <input type="date" name="fecha_pago" value="{{ $vFechaPago }}" class="{{ $inputClass }}">
+                                </div>
+
+                                <div>
+                                    <label class="{{ $fieldLabel }}">Fecha de Modulación</label>
+                                    <input type="date" name="fecha_modulacion" value="{{ $vFechaMod }}" class="{{ $inputClass }}">
+                                </div>
+
+                                <div class="lg:col-span-2">
+                                    <label class="{{ $fieldLabel }}">Fecha de Entrega</label>
+                                    <input type="date" name="fecha_entrega" value="{{ $vFechaEntrega }}" class="{{ $inputClass }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                                class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                            💾 Guardar Cambios
+                        </button>
+                    </form>
+                @endif
+            @endif
+
             {{-- placeholders --}}
-            @if(in_array($activeTab, ['despacho','gastos']))
+            @if(in_array($activeTab, ['gastos']))
                 <div class="p-6 rounded-2xl bg-slate-800/40 border border-slate-700 text-gray-200">
                     <div class="text-sm text-gray-400 mb-2">
                         Esta pestaña la habilitamos cuando me pases los campos.

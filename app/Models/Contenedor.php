@@ -61,4 +61,9 @@ class Contenedor extends Model
             default => 'Desconocido',
         };
     }
+
+    public function despacho()
+    {
+        return $this->hasOne(\App\Models\Despacho::class);
+    }
 }
