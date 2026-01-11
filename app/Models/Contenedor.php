@@ -66,4 +66,9 @@ class Contenedor extends Model
     {
         return $this->hasOne(\App\Models\Despacho::class);
     }
+
+    public function gastos(): HasMany
+    {
+        return $this->hasMany(Gasto::class, 'contenedor_id')->where('tipo', 'general');
+    }
 }

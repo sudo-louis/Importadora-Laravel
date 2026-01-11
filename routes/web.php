@@ -52,6 +52,9 @@ Route::middleware(['auth'])->group(function () {
     
     Route::put('contenedores/{contenedor}/cotizacion', [ContenedorController::class, 'updateCotizacion'])
     ->name('contenedores.cotizacion.update');
+
+    Route::put('contenedores/{contenedor}/gastos', [ContenedorController::class, 'updateGastos'])
+    ->name('contenedores.gastos.update');
 });
 
 require __DIR__.'/auth.php';

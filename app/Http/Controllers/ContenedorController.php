@@ -75,6 +75,7 @@ class ContenedorController extends Controller
             'envioDocumento',
             'cotizacion',
             'despacho', // ✅ NUEVO
+            'gastos',   // ✅ NUEVO (para pestaña Gastos)
         ]);
 
         return view('contenedores.show', compact('contenedor', 'mode', 'tab'));
@@ -229,5 +230,80 @@ class ContenedorController extends Controller
         return redirect()
             ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'despacho'])
             ->with('success', 'Despacho actualizado');
+    }
+
+    /**
+     * ✅ NUEVO: Guarda pestaña Gastos (Generales)
+     * - Recibe array gastos[][id, descripcion, monto]
+     * - Actualiza existentes, crea nuevos, y elimina los que ya no vengan
+     */
+    public function updateGastos(Request $request, Contenedor $contenedor)
+    {
+        $data = $request->validate([
+            'gastos' => ['nullable','array'],
+            'gastos.*.id' => ['nullable','integer'],
+            'gastos.*.descripcion' => ['nullable','string','max:255'],
+            'gastos.*.monto' => ['nullable','numeric','min:0'],
+        ]);
+
+        DB::transaction(function () use ($contenedor, $data) {
+
+            // Traemos gastos actuales de tipo "general"
+            $actuales = $contenedor->gastos()->get(); // relación filtrada a 'general' en el modelo (recomendado)
+            $actualIds = $actuales->pluck('id')->all();
+
+            $rows = $data['gastos'] ?? [];
+
+            $keepIds = [];
+
+            foreach ($rows as $g) {
+                $id = $g['id'] ?? null;
+                $desc = trim((string)($g['descripcion'] ?? ''));
+                $monto = $g['monto'] ?? null;
+
+                // si viene completamente vacío, lo ignoramos
+                if ($desc === '' && ($monto === null || $monto === '')) {
+                    continue;
+                }
+
+                $payload = [
+                    'contenedor_id' => $contenedor->id,
+                    'tipo' => 'general',
+                    'descripcion' => $desc !== '' ? $desc : 'Gasto',
+                    'monto' => $monto ?? 0,
+                ];
+
+                if ($id && in_array($id, $actualIds, true)) {
+                    // update
+                    Gasto::where('id', $id)
+                        ->where('contenedor_id', $contenedor->id)
+                        ->where('tipo', 'general')
+                        ->update([
+                            'descripcion' => $payload['descripcion'],
+                            'monto' => $payload['monto'],
+                        ]);
+
+                    $keepIds[] = $id;
+                } else {
+                    // create
+                    $nuevo = Gasto::create($payload);
+                    $keepIds[] = $nuevo->id;
+                }
+            }
+
+            // eliminar los que existían y ya no vienen
+            $toDelete = array_diff($actualIds, $keepIds);
+
+            if (!empty($toDelete)) {
+                Gasto::where('contenedor_id', $contenedor->id)
+                    ->where('tipo', 'general')
+                    ->whereIn('id', $toDelete)
+                    ->delete();
+            }
+        });
+
+        return redirect()
+            ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'gastos'])
+            ->with('success', 'Gastos actualizados');
     }
 }

@@ -854,16 +854,181 @@
             @endif
 
             {{-- placeholders --}}
-            @if(in_array($activeTab, ['gastos']))
-                <div class="p-6 rounded-2xl bg-slate-800/40 border border-slate-700 text-gray-200">
-                    <div class="text-sm text-gray-400 mb-2">
-                        Esta pestaña la habilitamos cuando me pases los campos.
+                        {{-- ✅ GASTOS (NUEVO) --}}
+            @if($activeTab === 'gastos')
+                @php
+                    $canEdit = $isEdit;
+
+                    // Si ya traes relación: $contenedor->gastos (o similar), úsala aquí.
+                    // Por ahora asumimos que viene como colección (puede ser vacía).
+                    $gastos = $contenedor->gastos ?? collect();
+
+                    // Mapeo para Alpine
+                    $gastosJs = $gastos->map(fn($g) => [
+                        'id' => $g->id ?? null,
+                        'descripcion' => $g->descripcion ?? '',
+                        'monto' => (float)($g->monto ?? 0),
+                    ])->values();
+
+                    $cardWrap = "rounded-2xl border border-slate-700 bg-slate-800/20 p-6";
+                    $rowClass = "rounded-2xl bg-slate-900/30 border border-slate-700 px-5 py-4 flex items-center justify-between";
+                @endphp
+
+                @if(!$canEdit)
+                    {{-- VIEW --}}
+                    <div class="{{ $cardWrap }}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-slate-900/60 border border-slate-700 flex items-center justify-center text-xl">
+                                    🧾
+                                </div>
+                                <div class="text-white font-extrabold text-lg">Registro de Gastos</div>
+                            </div>
+
+                            <div class="px-4 py-2 rounded-2xl border border-slate-700 bg-slate-800 text-emerald-400 font-bold">
+                                💲 Total:
+                                $ {{ number_format((float)$gastos->sum('monto'), 2) }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 rounded-2xl border border-slate-700 bg-slate-900/30 p-6">
+                            <div class="text-white font-extrabold mb-4">Gastos Generales</div>
+
+                            @if($gastos->count() === 0)
+                                <div class="text-center text-gray-400 py-10">
+                                    No hay gastos registrados
+                                </div>
+                            @else
+                                <div class="space-y-3">
+                                    @foreach($gastos as $g)
+                                        <div class="{{ $rowClass }}">
+                                            <div class="text-white font-semibold">
+                                                {{ $g->descripcion }}
+                                            </div>
+                                            <div class="text-emerald-400 font-extrabold">
+                                                $ {{ number_format((float)$g->monto, 2) }}
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="font-semibold">
-                        Modo actual: {{ $isEdit ? 'Editar' : 'Ver' }}
-                    </div>
-                </div>
+                @else
+                    {{-- EDIT --}}
+                    <form id="form-gastos"
+                          method="POST"
+                          action="{{ route('contenedores.gastos.update', ['contenedor' => $contenedor->id]) }}"
+                          class="{{ $cardWrap }}"
+                          x-data="gastosForm({ gastos: @js($gastosJs) })">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-slate-900/60 border border-slate-700 flex items-center justify-center text-xl">
+                                    🧾
+                                </div>
+                                <div class="text-white font-extrabold text-lg">Registro de Gastos</div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div class="px-4 py-2 rounded-2xl border border-slate-700 bg-slate-800 text-emerald-400 font-bold">
+                                    💲 Total: $ <span x-text="money(total())"></span>
+                                </div>
+
+                                <button type="button"
+                                        @click="addGasto()"
+                                        class="px-5 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-semibold inline-flex items-center gap-2">
+                                    ＋ Agregar Gasto
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <template x-if="gastos.length === 0">
+                                <div class="text-center text-gray-400 py-10">
+                                    No hay gastos registrados
+                                </div>
+                            </template>
+
+                            <div class="space-y-3" x-show="gastos.length > 0" x-transition>
+                                <template x-for="(g, idx) in gastos" :key="idx">
+                                    <div class="rounded-2xl border border-slate-700 bg-slate-900/30 p-4">
+                                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+                                            {{-- descripcion --}}
+                                            <div class="lg:col-span-9">
+                                                <input type="text"
+                                                       class="{{ $inputClass }}"
+                                                       placeholder="Descripción del gasto"
+                                                       x-model="g.descripcion"
+                                                       :name="`gastos[${idx}][descripcion]`">
+                                                <input type="hidden"
+                                                       :name="`gastos[${idx}][id]`"
+                                                       x-model="g.id">
+                                            </div>
+
+                                            {{-- monto --}}
+                                            <div class="lg:col-span-2">
+                                                <input type="number"
+                                                       step="0.01"
+                                                       min="0"
+                                                       class="{{ $inputClass }}"
+                                                       placeholder="$ 0.00"
+                                                       x-model.number="g.monto"
+                                                       :name="`gastos[${idx}][monto]`">
+                                            </div>
+
+                                            {{-- delete --}}
+                                            <div class="lg:col-span-1 flex justify-end">
+                                                <button type="button"
+                                                        @click="removeGasto(idx)"
+                                                        class="text-red-500 hover:text-red-400"
+                                                        title="Eliminar">
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        {{-- Botón interno por si no usa el superior --}}
+                        <div class="pt-4">
+                            <button type="submit"
+                                    class="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                                💾 Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+
+                    <script>
+                        function gastosForm({ gastos }) {
+                            return {
+                                gastos: (gastos && gastos.length) ? gastos : [],
+                                addGasto() {
+                                    this.gastos.push({ id: null, descripcion: '', monto: 0 });
+                                },
+                                removeGasto(i) {
+                                    this.gastos.splice(i, 1);
+                                },
+                                total() {
+                                    return this.gastos.reduce((sum, g) => {
+                                        const n = parseFloat(g.monto ?? 0);
+                                        return sum + (isNaN(n) ? 0 : n);
+                                    }, 0);
+                                },
+                                money(v) {
+                                    const n = Number(v) || 0;
+                                    return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                }
+                            }
+                        }
+                    </script>
+                @endif
             @endif
+
 
         </div>
     </div>
