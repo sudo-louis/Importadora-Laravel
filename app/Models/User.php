@@ -48,4 +48,9 @@ class User extends Authenticatable
             ->whereHas('permisos', fn($q) => $q->where('modulo', $modulo)->where('tipo', $tipo))
             ->exists();
     }
+
+    public function plantillas()
+    {
+        return $this->hasMany(\App\Models\Plantilla::class, 'created_by');
+    }
 }
