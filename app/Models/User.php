@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
@@ -11,7 +12,11 @@ class User extends Authenticatable
     use Notifiable;
 
     protected $fillable = [
-        'name','email','password','is_active',
+        'name',
+        'username',     // ✅ IMPORTANTE (tu UI lo usa)
+        'email',
+        'password',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -29,9 +34,13 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function primaryRole(): ?Role
+    {
+        return $this->roles()->orderBy('roles.id')->first();
+    }
+
     public function permisos(): \Illuminate\Support\Collection
     {
-        // Permisos a través de roles
         return $this->roles()
             ->with('permisos')
             ->get()
@@ -43,13 +52,12 @@ class User extends Authenticatable
 
     public function canDo(string $modulo, string $tipo): bool
     {
-        // tipo: ver|crear|editar|eliminar
         return $this->roles()
             ->whereHas('permisos', fn($q) => $q->where('modulo', $modulo)->where('tipo', $tipo))
             ->exists();
     }
 
-    public function plantillas()
+    public function plantillas(): HasMany
     {
         return $this->hasMany(\App\Models\Plantilla::class, 'created_by');
     }

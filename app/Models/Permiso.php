@@ -7,9 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permiso extends Model
 {
-    protected $fillable = ['name', 'modulo', 'tipo'];
+    protected $table = 'permisos';
 
-    // protected $table = 'permisos';
+    protected $fillable = [
+        'name',
+        'guard_name',
+        'module',
+        'tipo',
+    ];
 
     public function roles(): BelongsToMany
     {
