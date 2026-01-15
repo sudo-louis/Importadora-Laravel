@@ -6,13 +6,7 @@
         // $filters = ['from','to','clientes','contenedores','template']
         // $results = [...]
         $templates = $templates ?? [];
-        $filters = $filters ?? [
-            'from' => null,
-            'to' => null,
-            'clientes' => [],
-            'contenedores' => [],
-            'template' => 'default:general',
-        ];
+        $filters = $filters ?? ['from'=>null,'to'=>null,'clientes'=>[],'contenedores'=>[],'template'=>'default:general'];
         $results = $results ?? [];
     @endphp
 
@@ -108,7 +102,6 @@
                             <input type="text"
                                    x-model="clienteQuery"
                                    @input="fetchClientesDebounced()"
-                                   @focus="fetchClientesDebounced()"
                                    @keydown.enter.prevent="addClienteFromQuery()"
                                    class="w-full px-4 py-4 rounded-2xl bg-slate-800 border border-slate-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                                    placeholder="Escribe para buscar clientes...">
@@ -126,9 +119,7 @@
                                     </button>
                                 </template>
 
-                                <div x-show="clienteSuggestions.length === 0"
-                                     class="px-4 py-3 text-gray-400 text-sm"
-                                     style="display:none;">
+                                <div x-show="clienteSuggestions.length === 0" class="px-4 py-3 text-gray-400 text-sm" style="display:none;">
                                     Sin resultados
                                 </div>
                             </div>
@@ -159,7 +150,6 @@
                             <input type="text"
                                    x-model="contenedorQuery"
                                    @input="fetchContenedoresDebounced()"
-                                   @focus="fetchContenedoresDebounced()"
                                    @keydown.enter.prevent="addContenedorFromQuery()"
                                    class="w-full px-4 py-4 rounded-2xl bg-slate-800 border border-slate-700 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                                    placeholder="Escribe para buscar contenedores...">
@@ -177,9 +167,7 @@
                                     </button>
                                 </template>
 
-                                <div x-show="contenedorSuggestions.length === 0"
-                                     class="px-4 py-3 text-gray-400 text-sm"
-                                     style="display:none;">
+                                <div x-show="contenedorSuggestions.length === 0" class="px-4 py-3 text-gray-400 text-sm" style="display:none;">
                                     Sin resultados
                                 </div>
                             </div>
@@ -269,33 +257,33 @@
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="bg-slate-900/80 border-b border-slate-800">
-                                <tr class="text-left text-gray-300">
-                                    <th class="px-5 py-4 text-xs uppercase tracking-wider">Contenedor</th>
-                                    <th class="px-5 py-4 text-xs uppercase tracking-wider">Cliente</th>
-                                    <th class="px-5 py-4 text-xs uppercase tracking-wider">Fecha Arribo</th>
-                                    <th class="px-5 py-4 text-xs uppercase tracking-wider">Fecha Registro</th>
-                                    <th class="px-5 py-4 text-xs uppercase tracking-wider">Días transcurridos</th>
-                                    <th class="px-5 py-4 text-xs uppercase tracking-wider">Estado</th>
-                                </tr>
+                            <tr class="text-left text-gray-300">
+                                <th class="px-5 py-4 text-xs uppercase tracking-wider">Contenedor</th>
+                                <th class="px-5 py-4 text-xs uppercase tracking-wider">Cliente</th>
+                                <th class="px-5 py-4 text-xs uppercase tracking-wider">Fecha Arribo</th>
+                                <th class="px-5 py-4 text-xs uppercase tracking-wider">Fecha Registro</th>
+                                <th class="px-5 py-4 text-xs uppercase tracking-wider">Días transcurridos</th>
+                                <th class="px-5 py-4 text-xs uppercase tracking-wider">Estado</th>
+                            </tr>
                             </thead>
 
                             <tbody class="divide-y divide-slate-800">
-                                <template x-for="row in results" :key="row.id">
-                                    <tr class="hover:bg-slate-900/60">
-                                        <td class="px-5 py-4 text-white font-semibold" x-text="row.numero_contenedor"></td>
-                                        <td class="px-5 py-4 text-white" x-text="row.cliente"></td>
-                                        <td class="px-5 py-4 text-white" x-text="row.fecha_arribo"></td>
-                                        <td class="px-5 py-4 text-white" x-text="row.fecha_registro"></td>
-                                        <td class="px-5 py-4 text-white" x-text="row.dias_transcurridos"></td>
-                                        <td class="px-5 py-4 text-white" x-text="row.estado"></td>
-                                    </tr>
-                                </template>
-
-                                <tr x-show="results.length === 0" style="display:none;">
-                                    <td colspan="6" class="px-5 py-10 text-center text-gray-400">
-                                        No se encontraron contenedores en el periodo seleccionado.
-                                    </td>
+                            <template x-for="row in results" :key="row.id">
+                                <tr class="hover:bg-slate-900/60">
+                                    <td class="px-5 py-4 text-white font-semibold" x-text="row.numero_contenedor"></td>
+                                    <td class="px-5 py-4 text-white" x-text="row.cliente"></td>
+                                    <td class="px-5 py-4 text-white" x-text="row.fecha_arribo"></td>
+                                    <td class="px-5 py-4 text-white" x-text="row.fecha_registro"></td>
+                                    <td class="px-5 py-4 text-white" x-text="row.dias_transcurridos"></td>
+                                    <td class="px-5 py-4 text-white" x-text="row.estado"></td>
                                 </tr>
+                            </template>
+
+                            <tr x-show="results.length === 0" style="display:none;">
+                                <td colspan="6" class="px-5 py-10 text-center text-gray-400">
+                                    No se encontraron contenedores en el periodo seleccionado.
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
@@ -312,6 +300,7 @@
 
                     // state
                     selectedTemplate: filtersFromServer?.template ?? 'default:general',
+
                     advancedOpen: false,
 
                     fechaInicio: filtersFromServer?.from ?? '',
@@ -335,13 +324,15 @@
                     _tFetchConts: null,
                     _tApply: null,
 
-                    init() {
-                        // si ya había fechas, el controller ya trae results
+                    init() {},
+
+                    canSearch() {
+                        return !!this.fechaInicio && !!this.fechaFin;
                     },
 
-                    // UX helpers
-                    canSearch() { return !!this.fechaInicio && !!this.fechaFin; },
-                    showNeedDates() { return (!this.fechaInicio || !this.fechaFin); },
+                    showNeedDates() {
+                        return (!this.fechaInicio || !this.fechaFin);
+                    },
 
                     rangeLabel() {
                         if (!this.fechaInicio && !this.fechaFin) return 'Selecciona un rango de fechas';
@@ -354,7 +345,9 @@
                         return (this.selectedClientes?.length ?? 0) + (this.selectedContenedores?.length ?? 0);
                     },
 
+                    // -----------------
                     // Autocomplete: clientes
+                    // -----------------
                     fetchClientesDebounced() {
                         clearTimeout(this._tFetchClientes);
                         this._tFetchClientes = setTimeout(() => this.fetchClientes(), 200);
@@ -368,20 +361,31 @@
                             return;
                         }
 
+                        // ✅ solo sugerir con rango seleccionado
+                        if (!this.canSearch()) {
+                            this.clienteSuggestions = [];
+                            this.clienteSuggestionsOpen = false;
+                            return;
+                        }
+
+                        const params = new URLSearchParams({
+                            q,
+                            from: this.fechaInicio,
+                            to: this.fechaFin,
+                        });
+
+                        // ✅ URL fija (más robusto a cambios de rutas/nombres)
+                        const url = `/reportes/autocomplete/clientes?${params.toString()}`;
+
                         try {
-                            const url = `{{ route('reportes.autocomplete.clientes') }}?q=${encodeURIComponent(q)}`;
                             const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-
-                            if (!res.ok) {
-                                this.clienteSuggestions = [];
-                                this.clienteSuggestionsOpen = false;
-                                return;
-                            }
-
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
                             const data = await res.json();
+
                             this.clienteSuggestions = (data ?? []).filter(x => !this.selectedClientes.includes(x));
                             this.clienteSuggestionsOpen = true;
                         } catch (e) {
+                            console.error('Autocomplete clientes falló:', e);
                             this.clienteSuggestions = [];
                             this.clienteSuggestionsOpen = false;
                         }
@@ -409,7 +413,9 @@
                         this.applyFiltersDebounced();
                     },
 
+                    // -----------------
                     // Autocomplete: contenedores
+                    // -----------------
                     fetchContenedoresDebounced() {
                         clearTimeout(this._tFetchConts);
                         this._tFetchConts = setTimeout(() => this.fetchContenedores(), 200);
@@ -423,20 +429,31 @@
                             return;
                         }
 
+                        // ✅ solo sugerir con rango seleccionado
+                        if (!this.canSearch()) {
+                            this.contenedorSuggestions = [];
+                            this.contenedorSuggestionsOpen = false;
+                            return;
+                        }
+
+                        const params = new URLSearchParams({
+                            q,
+                            from: this.fechaInicio,
+                            to: this.fechaFin,
+                        });
+
+                        // ✅ URL fija (más robusto)
+                        const url = `/reportes/autocomplete/contenedores?${params.toString()}`;
+
                         try {
-                            const url = `{{ route('reportes.autocomplete.contenedores') }}?q=${encodeURIComponent(q)}`;
                             const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-
-                            if (!res.ok) {
-                                this.contenedorSuggestions = [];
-                                this.contenedorSuggestionsOpen = false;
-                                return;
-                            }
-
+                            if (!res.ok) throw new Error(`HTTP ${res.status}`);
                             const data = await res.json();
+
                             this.contenedorSuggestions = (data ?? []).filter(x => !this.selectedContenedores.includes(x));
                             this.contenedorSuggestionsOpen = true;
                         } catch (e) {
+                            console.error('Autocomplete contenedores falló:', e);
                             this.contenedorSuggestions = [];
                             this.contenedorSuggestionsOpen = false;
                         }
@@ -464,7 +481,9 @@
                         this.applyFiltersDebounced();
                     },
 
-                    // Aplicar filtros (recarga con querystring)
+                    // -----------------
+                    // Aplicar filtros (recarga la página con querystring)
+                    // -----------------
                     applyFiltersDebounced() {
                         clearTimeout(this._tApply);
                         this._tApply = setTimeout(() => this.applyFilters(), 250);

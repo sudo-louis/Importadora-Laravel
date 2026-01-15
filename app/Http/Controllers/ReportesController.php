@@ -7,6 +7,7 @@ use App\Models\Contenedor;
 use App\Models\Plantilla;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ReportesController extends Controller
@@ -15,7 +16,6 @@ class ReportesController extends Controller
     {
         $templates = $this->buildTemplates();
 
-        // ✅ Mantener filtros al recargar (para que Alpine no los borre)
         $filters = [
             'template'     => $request->input('template', 'default:general'),
             'from'         => $request->input('from'),
@@ -24,7 +24,6 @@ class ReportesController extends Controller
             'contenedores' => $request->input('contenedores', []),
         ];
 
-        // normaliza por si llegan como string / csv
         $filters['clientes']     = $this->normalizeList($filters['clientes']);
         $filters['contenedores'] = $this->normalizeList($filters['contenedores']);
 
@@ -78,55 +77,135 @@ class ReportesController extends Controller
     }
 
     /**
-     * ✅ Autocomplete CLIENTES
+     * ✅ Autocomplete CLIENTES filtrado por rango (from/to)
+     * Query params esperados:
+     * - q (string, min 2)
+     * - from (date, opcional)
+     * - to (date, opcional)
      */
     public function autocompleteClientes(Request $request)
     {
-        $q = trim((string) $request->query('q', ''));
-        if (mb_strlen($q) < 2) return response()->json([]);
+        try {
+            $q = $request->query('q', '');
+            if (is_array($q)) $q = implode(' ', $q);
+            $q = trim((string) $q);
 
-        // DISTINCT clientes
-        $items = Contenedor::query()
-            ->select('cliente')
-            ->whereNotNull('cliente')
-            ->where('cliente', 'like', "%{$q}%")
-            ->distinct()
-            ->orderBy('cliente')
-            ->limit(20)
-            ->pluck('cliente')
-            ->values()
-            ->all();
+            if (mb_strlen($q) < 2) {
+                return response()->json([]);
+            }
 
-        return response()->json($items);
+            $from = $request->query('from');
+            $to   = $request->query('to');
+
+            $query = Contenedor::query()
+                ->select('cliente')
+                ->whereNotNull('cliente')
+                ->where('cliente', '!=', '');
+
+            // ✅ aplica rango si viene completo (recomendado)
+            if ($from && $to) {
+                $fromD = Carbon::parse($from)->startOfDay()->toDateString();
+                $toD   = Carbon::parse($to)->endOfDay()->toDateString();
+                $query->whereBetween('fecha_llegada', [$fromD, $toD]);
+            }
+
+            // Búsqueda por palabras
+            $q = preg_replace('/\s+/', ' ', $q);
+            $parts = array_values(array_filter(explode(' ', $q), fn ($p) => mb_strlen($p) >= 2));
+            foreach ($parts as $p) {
+                $query->where('cliente', 'like', '%' . $p . '%');
+            }
+
+            $items = $query
+                ->groupBy('cliente')
+                ->orderBy('cliente')
+                ->limit(20)
+                ->pluck('cliente')
+                ->map(fn ($v) => preg_replace('/\s+/', ' ', trim((string) $v)))
+                ->filter(fn ($v) => $v !== '')
+                ->values()
+                ->all();
+
+            return response()->json($items);
+        } catch (\Throwable $e) {
+            Log::error('autocompleteClientes failed', [
+                'message' => $e->getMessage(),
+                'q' => $request->query('q'),
+                'from' => $request->query('from'),
+                'to' => $request->query('to'),
+            ]);
+            return response()->json([]);
+        }
     }
 
     /**
-     * ✅ Autocomplete CONTENEDORES
+     * ✅ Autocomplete CONTENEDORES filtrado por rango (from/to)
+     * Query params esperados:
+     * - q (string, min 2)
+     * - from (date, opcional)
+     * - to (date, opcional)
      */
     public function autocompleteContenedores(Request $request)
     {
-        $q = trim((string) $request->query('q', ''));
-        if (mb_strlen($q) < 2) return response()->json([]);
+        try {
+            $q = $request->query('q', '');
+            if (is_array($q)) $q = implode(' ', $q);
+            $q = trim((string) $q);
 
-        $items = Contenedor::query()
-            ->select('numero_contenedor')
-            ->whereNotNull('numero_contenedor')
-            ->where('numero_contenedor', 'like', "%{$q}%")
-            ->distinct()
-            ->orderBy('numero_contenedor')
-            ->limit(20)
-            ->pluck('numero_contenedor')
-            ->values()
-            ->all();
+            if (mb_strlen($q) < 2) {
+                return response()->json([]);
+            }
 
-        return response()->json($items);
+            $from = $request->query('from');
+            $to   = $request->query('to');
+
+            $query = Contenedor::query()
+                ->select('numero_contenedor')
+                ->whereNotNull('numero_contenedor')
+                ->where('numero_contenedor', '!=', '');
+
+            // ✅ aplica rango si viene completo
+            if ($from && $to) {
+                $fromD = Carbon::parse($from)->startOfDay()->toDateString();
+                $toD   = Carbon::parse($to)->endOfDay()->toDateString();
+                $query->whereBetween('fecha_llegada', [$fromD, $toD]);
+            }
+
+            $q = preg_replace('/\s+/', ' ', $q);
+            $qNoSpaces = str_replace(' ', '', $q);
+
+            $query->where(function ($w) use ($q, $qNoSpaces) {
+                $w->where('numero_contenedor', 'like', '%' . $q . '%');
+                if ($qNoSpaces !== $q) {
+                    $w->orWhere('numero_contenedor', 'like', '%' . $qNoSpaces . '%');
+                }
+            });
+
+            $items = $query
+                ->groupBy('numero_contenedor')
+                ->orderBy('numero_contenedor')
+                ->limit(20)
+                ->pluck('numero_contenedor')
+                ->map(fn ($v) => preg_replace('/\s+/', ' ', trim((string) $v)))
+                ->filter(fn ($v) => $v !== '')
+                ->values()
+                ->all();
+
+            return response()->json($items);
+        } catch (\Throwable $e) {
+            Log::error('autocompleteContenedores failed', [
+                'message' => $e->getMessage(),
+                'q' => $request->query('q'),
+                'from' => $request->query('from'),
+                'to' => $request->query('to'),
+            ]);
+            return response()->json([]);
+        }
     }
 
-    /**
-     * =========================
-     * Query con filtros
-     * =========================
-     */
+    // =========================
+    // Query con filtros
+    // =========================
     private function buildQueryFromFilters(array $filters)
     {
         $from = Carbon::parse($filters['from'])->startOfDay();
@@ -134,7 +213,6 @@ class ReportesController extends Controller
 
         $q = Contenedor::query()
             ->with(['liberacion', 'envioDocumento', 'cotizacion', 'despacho', 'gastos'])
-            // ⚠️ Ajusta si tu filtro debe ser por otra fecha
             ->whereBetween('fecha_llegada', [$from->toDateString(), $to->toDateString()])
             ->orderBy('fecha_llegada', 'desc');
 
@@ -193,11 +271,9 @@ class ReportesController extends Controller
         ];
     }
 
-    /**
-     * =========================
-     * Templates (default + custom)
-     * =========================
-     */
+    // =========================
+    // Templates (default + custom)
+    // =========================
     private function buildTemplates()
     {
         $default = $this->defaultTemplates();
