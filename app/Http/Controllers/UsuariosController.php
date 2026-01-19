@@ -16,29 +16,31 @@ class UsuariosController extends Controller
     {
         $tab = $request->query('tab', 'usuarios');
 
-        // Roles para selects
+        // ====== Roles para selects (usuarios modal) ======
         $roles = Role::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'color'])
+            ->get(['id','name','color'])
             ->map(fn($r) => [
                 'id' => $r->id,
                 'name' => $r->name,
                 'color' => $r->color,
+                // UI: protegido SOLO para Admin (Opción A)
+                'protegido' => $r->isAdmin(),
             ])
             ->values()
             ->all();
 
-        // Usuarios con rol principal
+        // ====== Usuarios (para la pestaña usuarios) ======
         $users = User::query()
             ->with(['roles:id,name,color'])
-            ->orderBy('id', 'desc')
+            ->orderBy('id','desc')
             ->get()
             ->map(function (User $u) {
                 $role = $u->roles->sortBy('id')->first();
                 return [
                     'id' => $u->id,
                     'name' => $u->name,
-                    'username' => $u->username,
+                    'username' => $u->username ?? null,
                     'email' => $u->email,
                     'is_active' => (bool) $u->is_active,
                     'role_id' => $role?->id,
@@ -49,35 +51,36 @@ class UsuariosController extends Controller
             ->values()
             ->all();
 
-        // ✅ Permisos agrupados por módulo (formato listo para Alpine)
+        // ====== permisosByModulo (para mapear matriz a IDs reales) ======
+        // Estructura: { modulo: { ver: id, crear: id, editar: id, eliminar: id } }
         $permisosByModulo = Permiso::query()
             ->orderBy('modulo')
             ->orderBy('tipo')
-            ->orderBy('name')
-            ->get(['id', 'name', 'modulo', 'tipo'])
+            ->get(['id','modulo','tipo'])
             ->groupBy('modulo')
-            ->map(function ($items) {
-                return $items->map(fn($p) => [
-                    'id' => $p->id,
-                    'name' => $p->name,
-                    'modulo' => $p->modulo,
-                    'tipo' => $p->tipo,
-                ])->values()->all();
-            })
-            ->toArray();
+            ->map(fn($items) => $items->keyBy('tipo')->map(fn($p) => $p->id)->all())
+            ->all();
 
-        // Roles con permisos + conteo de usuarios
+        // ====== RolesFull (para chips + conteo usuarios) ======
         $rolesFull = Role::query()
-            ->with(['permisos:id,name,modulo,tipo', 'users:id'])
+            ->with(['permisos:id,name,modulo,tipo'])
+            ->withCount('users')
             ->orderBy('name')
             ->get()
             ->map(function (Role $r) {
+                // Opción A: si es Admin, en UI mostramos todos los permisos (aunque no estén en pivot)
+                $permisos = $r->isAdmin()
+                    ? Permiso::query()->get(['id','name','modulo','tipo'])
+                    : $r->permisos;
+
                 return [
                     'id' => $r->id,
                     'name' => $r->name,
                     'color' => $r->color,
-                    'users_count' => $r->users->count(),
-                    'permisos' => $r->permisos->map(fn($p) => [
+                    'description' => $r->description,
+                    'protegido' => $r->isAdmin(),
+                    'users_count' => (int) $r->users_count,
+                    'permisos' => $permisos->map(fn($p) => [
                         'id' => $p->id,
                         'modulo' => $p->modulo,
                         'tipo' => $p->tipo,
@@ -98,17 +101,99 @@ class UsuariosController extends Controller
     }
 
     // ==========================
-    // USUARIOS
+    // ROLES (FUNCIONAL)
+    // ==========================
+    public function rolesStore(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required','string','max:255', Rule::unique('roles','name')],
+            'color' => ['nullable','string','max:30'],
+            'description' => ['nullable','string','max:255'],
+            'permisos' => ['array'],
+            'permisos.*' => ['integer', Rule::exists('permisos','id')],
+        ]);
+
+        DB::transaction(function () use ($data) {
+            $role = Role::create([
+                'name' => $data['name'],
+                'color' => $data['color'] ?? 'Púrpura',
+                'description' => $data['description'] ?? null,
+            ]);
+
+            // Opción A: si crean "Administrador", no guardamos pivot: siempre full por lógica
+            if (!$role->isAdmin()) {
+                $role->permisos()->sync($data['permisos'] ?? []);
+            }
+        });
+
+        return redirect()->route('usuarios.index', ['tab' => 'roles'])
+            ->with('success', 'Rol creado correctamente.');
+    }
+
+    public function rolesUpdate(Request $request, Role $role)
+    {
+        // Opción A: Admin no se edita (nombre/permisos)
+        if ($role->isAdmin()) {
+            return redirect()->route('usuarios.index', ['tab' => 'roles'])
+                ->with('error', 'El rol Administrador está protegido y no se puede editar.');
+        }
+
+        $data = $request->validate([
+            'name' => ['required','string','max:255', Rule::unique('roles','name')->ignore($role->id)],
+            'color' => ['nullable','string','max:30'],
+            'description' => ['nullable','string','max:255'],
+            'permisos' => ['array'],
+            'permisos.*' => ['integer', Rule::exists('permisos','id')],
+        ]);
+
+        DB::transaction(function () use ($role, $data) {
+            $role->update([
+                'name' => $data['name'],
+                'color' => $data['color'] ?? $role->color,
+                'description' => $data['description'] ?? $role->description,
+            ]);
+
+            $role->permisos()->sync($data['permisos'] ?? []);
+        });
+
+        return redirect()->route('usuarios.index', ['tab' => 'roles'])
+            ->with('success', 'Rol actualizado correctamente.');
+    }
+
+    public function rolesDestroy(Request $request, Role $role)
+    {
+        // Opción A: Admin no se borra
+        if ($role->isAdmin()) {
+            return redirect()->route('usuarios.index', ['tab' => 'roles'])
+                ->with('error', 'El rol Administrador está protegido y no se puede eliminar.');
+        }
+
+        if ($role->users()->exists()) {
+            return redirect()->route('usuarios.index', ['tab' => 'roles'])
+                ->with('error', 'No puedes eliminar un rol que tiene usuarios asignados.');
+        }
+
+        DB::transaction(function () use ($role) {
+            $role->permisos()->detach();
+            $role->delete();
+        });
+
+        return redirect()->route('usuarios.index', ['tab' => 'roles'])
+            ->with('success', 'Rol eliminado correctamente.');
+    }
+
+    // ==========================
+    // USUARIOS (no lo tocamos ahora)
     // ==========================
     public function store(Request $request)
     {
         $data = $request->validate([
             'name' => ['required','string','max:255'],
-            'username' => ['nullable','string','max:50', Rule::unique('users', 'username')],
-            'email' => ['required','email','max:255', Rule::unique('users', 'email')],
+            'username' => ['nullable','string','max:50', Rule::unique('users','username')],
+            'email' => ['required','email','max:255', Rule::unique('users','email')],
             'password' => ['required','string','min:6','confirmed'],
             'is_active' => ['required', Rule::in([0,1,'0','1',true,false])],
-            'role_id' => ['nullable','integer', Rule::exists('roles', 'id')],
+            'role_id' => ['nullable','integer', Rule::exists('roles','id')],
         ]);
 
         DB::transaction(function () use ($data) {
@@ -121,12 +206,11 @@ class UsuariosController extends Controller
             ]);
 
             if (!empty($data['role_id'])) {
-                $user->roles()->sync([(int) $data['role_id']]);
+                $user->roles()->sync([(int)$data['role_id']]);
             }
         });
 
-        return redirect()
-            ->route('usuarios.index', ['tab' => 'usuarios'])
+        return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
             ->with('success', 'Usuario creado correctamente.');
     }
 
@@ -134,11 +218,11 @@ class UsuariosController extends Controller
     {
         $data = $request->validate([
             'name' => ['required','string','max:255'],
-            'username' => ['nullable','string','max:50', Rule::unique('users', 'username')->ignore($user->id)],
-            'email' => ['required','email','max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'username' => ['nullable','string','max:50', Rule::unique('users','username')->ignore($user->id)],
+            'email' => ['required','email','max:255', Rule::unique('users','email')->ignore($user->id)],
             'password' => ['nullable','string','min:6','confirmed'],
             'is_active' => ['required', Rule::in([0,1,'0','1',true,false])],
-            'role_id' => ['nullable','integer', Rule::exists('roles', 'id')],
+            'role_id' => ['nullable','integer', Rule::exists('roles','id')],
         ]);
 
         DB::transaction(function () use ($user, $data) {
@@ -156,24 +240,19 @@ class UsuariosController extends Controller
             $user->save();
 
             if (array_key_exists('role_id', $data)) {
-                if (!empty($data['role_id'])) {
-                    $user->roles()->sync([(int) $data['role_id']]);
-                } else {
-                    $user->roles()->detach();
-                }
+                if (!empty($data['role_id'])) $user->roles()->sync([(int)$data['role_id']]);
+                else $user->roles()->detach();
             }
         });
 
-        return redirect()
-            ->route('usuarios.index', ['tab' => 'usuarios'])
+        return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
             ->with('success', 'Usuario actualizado correctamente.');
     }
 
     public function destroy(Request $request, User $user)
     {
         if (auth()->id() === $user->id) {
-            return redirect()
-                ->route('usuarios.index', ['tab' => 'usuarios'])
+            return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
                 ->with('error', 'No puedes eliminar el usuario con el que tienes la sesión activa.');
         }
 
@@ -182,75 +261,7 @@ class UsuariosController extends Controller
             $user->delete();
         });
 
-        return redirect()
-            ->route('usuarios.index', ['tab' => 'usuarios'])
+        return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
             ->with('success', 'Usuario eliminado correctamente.');
-    }
-
-    // ==========================
-    // ROLES
-    // ==========================
-    public function rolesStore(Request $request)
-    {
-        $data = $request->validate([
-            'name' => ['required','string','max:255', Rule::unique('roles', 'name')],
-            'color' => ['nullable','string','max:50'],
-            'permisos' => ['nullable','array'],
-            'permisos.*' => ['integer', Rule::exists('permisos', 'id')],
-        ]);
-
-        DB::transaction(function () use ($data) {
-            $role = Role::create([
-                'name' => $data['name'],
-                'color' => $data['color'] ?? 'Púrpura',
-            ]);
-
-            $role->permisos()->sync($data['permisos'] ?? []);
-        });
-
-        return redirect()
-            ->route('usuarios.index', ['tab' => 'roles'])
-            ->with('success', 'Rol creado correctamente.');
-    }
-
-    public function rolesUpdate(Request $request, Role $role)
-    {
-        $data = $request->validate([
-            'name' => ['required','string','max:255', Rule::unique('roles', 'name')->ignore($role->id)],
-            'color' => ['nullable','string','max:50'],
-            'permisos' => ['nullable','array'],
-            'permisos.*' => ['integer', Rule::exists('permisos', 'id')],
-        ]);
-
-        DB::transaction(function () use ($role, $data) {
-            $role->update([
-                'name' => $data['name'],
-                'color' => $data['color'] ?? $role->color,
-            ]);
-
-            $role->permisos()->sync($data['permisos'] ?? []);
-        });
-
-        return redirect()
-            ->route('usuarios.index', ['tab' => 'roles'])
-            ->with('success', 'Rol actualizado correctamente.');
-    }
-
-    public function rolesDestroy(Request $request, Role $role)
-    {
-        if ($role->users()->exists()) {
-            return redirect()
-                ->route('usuarios.index', ['tab' => 'roles'])
-                ->with('error', 'No puedes eliminar un rol que tiene usuarios asignados.');
-        }
-
-        DB::transaction(function () use ($role) {
-            $role->permisos()->detach();
-            $role->delete();
-        });
-
-        return redirect()
-            ->route('usuarios.index', ['tab' => 'roles'])
-            ->with('success', 'Rol eliminado correctamente.');
     }
 }

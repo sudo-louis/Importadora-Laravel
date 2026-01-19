@@ -12,11 +12,7 @@ class Role extends Model
     protected $fillable = [
         'name',
         'color',
-        'protegido',
-    ];
-
-    protected $casts = [
-        'protegido' => 'boolean',
+        'description',
     ];
 
     public function permisos(): BelongsToMany
@@ -29,5 +25,11 @@ class Role extends Model
     {
         return $this->belongsToMany(User::class, 'user_role', 'role_id', 'user_id')
             ->withTimestamps();
+    }
+
+    // Opción A: Administrador siempre full permisos
+    public function isAdmin(): bool
+    {
+        return mb_strtolower($this->name) === 'administrador';
     }
 }

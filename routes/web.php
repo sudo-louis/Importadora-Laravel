@@ -6,9 +6,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PlantillaController;
 use App\Http\Controllers\ReportesController;
 use App\Http\Controllers\UsuariosController;
-use App\Http\Controllers\RolesPermisosController;
-use App\Http\Controllers\RoleController;
-
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
@@ -16,10 +13,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Vistas simples
+    // Vistas simples (ok)
     Route::view('/contenedores', 'contenedores.index')->name('contenedores.index');
     Route::view('/plantillas', 'plantillas.index')->name('plantillas.index');
-    Route::view('/usuarios', 'usuarios.index')->name('usuarios.index');
     Route::view('/actividad/contenedores', 'actividad.contenedores')->name('actividad.contenedores');
     Route::view('/actividad/usuarios', 'actividad.usuarios')->name('actividad.usuarios');
 
@@ -55,20 +51,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reportes/autocomplete/clientes', [ReportesController::class, 'autocompleteClientes'])->name('reportes.autocomplete.clientes');
     Route::get('/reportes/autocomplete/contenedores', [ReportesController::class, 'autocompleteContenedores'])->name('reportes.autocomplete.contenedores');
 
-    // Usuarios
-    Route::get('/usuarios/data', [UsuariosController::class, 'data'])->name('usuarios.data'); // para cargar cards vía fetch
-    Route::post('/usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
-    Route::put('/usuarios/{user}', [UsuariosController::class, 'update'])->name('usuarios.update');
-    Route::delete('/usuarios/{user}', [UsuariosController::class, 'destroy'])->name('usuarios.destroy');
-
+    // ====== USUARIOS + ROLES (misma pantalla) ======
     Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
 
-    // usuarios
+    // Usuarios (dejamos rutas listas, aunque luego conectas front)
     Route::post('/usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
     Route::put('/usuarios/{user}', [UsuariosController::class, 'update'])->name('usuarios.update');
     Route::delete('/usuarios/{user}', [UsuariosController::class, 'destroy'])->name('usuarios.destroy');
 
-    // roles
+    // Roles (FUNCIONAL)
     Route::post('/roles', [UsuariosController::class, 'rolesStore'])->name('roles.store');
     Route::put('/roles/{role}', [UsuariosController::class, 'rolesUpdate'])->name('roles.update');
     Route::delete('/roles/{role}', [UsuariosController::class, 'rolesDestroy'])->name('roles.destroy');
