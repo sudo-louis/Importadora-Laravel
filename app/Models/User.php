@@ -3,27 +3,21 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class User extends Authenticatable
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
-    // ✅ Escenario A (si no pones $table, Laravel usa "users" por default)
     protected $table = 'users';
 
     protected $fillable = [
-        'name',
-        'username',     // ✅ tu UI lo usa
-        'email',
-        'password',
-        'is_active',
+        'name','email','username','password','is_active',
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password','remember_token',
     ];
 
     protected $casts = [
@@ -31,39 +25,54 @@ class User extends Authenticatable
         'is_active' => 'boolean',
     ];
 
-    public function roles(): BelongsToMany
+    public function roles()
     {
-        // ✅ pivote real: user_role
-        return $this->belongsToMany(Role::class, 'user_role', 'user_id', 'role_id')
-            ->withTimestamps();
+        return $this->belongsToMany(
+            Role::class,
+            'user_role',
+            'user_id',
+            'role_id'
+        )->withTimestamps();
     }
 
-    public function primaryRole(): ?Role
+    /**
+     * ✅ Permiso exacto: modulo + tipo
+     * Ej: reportes + ver
+     * Si tipo es null -> cualquier permiso dentro del módulo.
+     */
+    public function hasPermiso(string $modulo, ?string $tipo = null): bool
     {
-        // ✅ orden por ID del rol
-        return $this->roles()->orderBy('roles.id')->first();
+        $modulo = mb_strtolower(trim($modulo));
+        $tipo   = $tipo !== null ? mb_strtolower(trim($tipo)) : null;
+
+        // Asegura roles cargados
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles.permisos');
+        }
+
+        foreach ($this->roles as $role) {
+            if (!$role->relationLoaded('permisos')) {
+                $role->load('permisos');
+            }
+
+            foreach ($role->permisos as $p) {
+                $pModulo = mb_strtolower((string) $p->modulo);
+                $pTipo   = mb_strtolower((string) $p->tipo);
+
+                if ($pModulo === $modulo && ($tipo === null || $pTipo === $tipo)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
-    public function permisos(): \Illuminate\Support\Collection
+    /**
+     * ✅ Acceso a módulo: si tiene al menos un permiso dentro del módulo
+     */
+    public function canAccessModule(string $modulo): bool
     {
-        return $this->roles()
-            ->with('permisos')
-            ->get()
-            ->pluck('permisos')
-            ->flatten()
-            ->unique('id')
-            ->values();
-    }
-
-    public function canDo(string $modulo, string $tipo): bool
-    {
-        return $this->roles()
-            ->whereHas('permisos', fn($q) => $q->where('modulo', $modulo)->where('tipo', $tipo))
-            ->exists();
-    }
-
-    public function plantillas(): HasMany
-    {
-        return $this->hasMany(\App\Models\Plantilla::class, 'created_by');
+        return $this->hasPermiso($modulo, null);
     }
 }

@@ -10,17 +10,21 @@
         $rolesFull = $rolesFull ?? [];
         $permisosByModulo = $permisosByModulo ?? [];
         $routes = [
+            // roles
             'rolesStore' => route('roles.store'),
             'rolesUpdate' => url('/roles'), // luego se usa /{id}
             'rolesDestroy' => url('/roles'), // luego se usa /{id}
+
+            // usuarios
+            'usersStore' => route('usuarios.store'),
+            'usersUpdate' => url('/usuarios'), // luego se usa /{id}
+            'usersDestroy' => url('/usuarios'), // luego se usa /{id}
         ];
 
         $csrf = csrf_token();
     @endphp
 
-    <div class="p-6 space-y-6"
-        x-data="usuariosPage(@js($tab), @js($users), @js($roles), @js($rolesFull), @js($permisosByModulo), @js($routes), @js($csrf))"
-        x-init="init()">
+    <div class="p-6 space-y-6" x-data="usuariosPage(@js($tab), @js($users), @js($roles), @js($rolesFull), @js($permisosByModulo), @js($routes), @js($csrf))" x-init="init()">
 
         {{-- Header --}}
         <div class="flex items-start justify-between gap-4">
@@ -209,14 +213,16 @@
 
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="text-sm text-gray-300 font-semibold">Nombre Completo <span class="text-red-400">*</span></label>
+                        <label class="text-sm text-gray-300 font-semibold">Nombre Completo <span
+                                class="text-red-400">*</span></label>
                         <input x-model="createForm.name"
                             class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                             placeholder="Ej: Juan Pérez García">
                     </div>
 
                     <div>
-                        <label class="text-sm text-gray-300 font-semibold">Usuario <span class="text-red-400">*</span></label>
+                        <label class="text-sm text-gray-300 font-semibold">Usuario <span
+                                class="text-red-400">*</span></label>
                         <input x-model="createForm.username"
                             class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                             placeholder="Ej: jperez">
@@ -224,14 +230,16 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="text-sm text-gray-300 font-semibold">Contraseña <span class="text-red-400">*</span></label>
+                            <label class="text-sm text-gray-300 font-semibold">Contraseña <span
+                                    class="text-red-400">*</span></label>
                             <input type="password" x-model="createForm.password"
                                 class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 placeholder="Ingrese contraseña">
                         </div>
 
                         <div>
-                            <label class="text-sm text-gray-300 font-semibold">Confirmar Contraseña <span class="text-red-400">*</span></label>
+                            <label class="text-sm text-gray-300 font-semibold">Confirmar Contraseña <span
+                                    class="text-red-400">*</span></label>
                             <input type="password" x-model="createForm.password_confirmation"
                                 class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 placeholder="Confirme contraseña">
@@ -246,7 +254,8 @@
                     </div>
 
                     <div>
-                        <label class="text-sm text-gray-300 font-semibold">Rol <span class="text-red-400">*</span></label>
+                        <label class="text-sm text-gray-300 font-semibold">Rol <span
+                                class="text-red-400">*</span></label>
                         <select x-model="createForm.role_id"
                             class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                             <option value="">Seleccione un rol</option>
@@ -279,16 +288,23 @@
         {{-- =========================
              MODAL: NUEVO ROL (MORADO + MATRIZ)
         ========================== --}}
-        <div x-show="modalRoleCreate" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="modalRoleCreate" style="display:none;"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
 
-            <div class="relative w-full max-w-4xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
+            <div class="relative w-full max-w-4xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden"
+                @click.stop>
                 {{-- header --}}
-                <div class="p-6 bg-gradient-to-r from-purple-700 to-fuchsia-600 flex items-start justify-between gap-4">
+                <div
+                    class="p-6 bg-gradient-to-r from-purple-700 to-fuchsia-600 flex items-start justify-between gap-4">
                     <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">🛡️</div>
+                        <div
+                            class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                            🛡️
+                        </div>
                         <div>
-                            <div class="text-white text-2xl font-extrabold" x-text="roleMode === 'create' ? 'Nuevo Rol' : 'Editar Rol'"></div>
+                            <div class="text-white text-2xl font-extrabold"
+                                x-text="roleMode === 'create' ? 'Nuevo Rol' : 'Editar Rol'"></div>
                             <div class="text-white/80 text-sm mt-1">Configure los permisos del rol</div>
                         </div>
                     </div>
@@ -304,7 +320,8 @@
                 <div class="p-6 space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="text-sm text-gray-300 font-semibold">Nombre del Rol <span class="text-red-400">*</span></label>
+                            <label class="text-sm text-gray-300 font-semibold">Nombre del Rol <span
+                                    class="text-red-400">*</span></label>
                             <input x-model="roleForm.name"
                                 class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 placeholder="Ej: Supervisor, Operador, Gerente">
@@ -326,7 +343,8 @@
                         <div class="text-white font-extrabold text-lg">Permisos de Contenedores</div>
 
                         {{-- Crear contenedores --}}
-                        <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 cursor-pointer">
+                        <label
+                            class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <input type="checkbox"
                                     class="w-5 h-5 rounded bg-slate-950 border-slate-700 text-purple-600 focus:ring-purple-500"
@@ -336,17 +354,25 @@
                                 </div>
                             </div>
 
-                            <div class="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-blue-300 font-extrabold">+</div>
+                            <div
+                                class="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-blue-300 font-extrabold">
+                                +
+                            </div>
                         </label>
 
                         {{-- Accordion: pestañas de contenedores --}}
                         <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-                            <button type="button" class="w-full p-5 flex items-center justify-between gap-4" @click="roleAccordion = !roleAccordion">
+                            <button type="button" class="w-full p-5 flex items-center justify-between gap-4"
+                                @click="roleAccordion = !roleAccordion">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-purple-300">⬣</div>
+                                    <div
+                                        class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-purple-300">
+                                        ⬣
+                                    </div>
                                     <div class="text-left">
                                         <div class="text-white font-extrabold">Pestañas de Contenedores</div>
-                                        <div class="text-gray-400 text-xs mt-1">Permisos de lectura/escritura por pestaña</div>
+                                        <div class="text-gray-400 text-xs mt-1">Permisos de lectura/escritura por
+                                            pestaña</div>
                                     </div>
                                 </div>
 
@@ -359,7 +385,8 @@
                             <div x-show="roleAccordion" style="display:none;" class="border-t border-slate-800 p-5">
                                 {{-- matrix --}}
                                 <div class="rounded-2xl border border-slate-800 bg-slate-950/40 overflow-hidden">
-                                    <div class="grid grid-cols-5 gap-2 p-4 border-b border-slate-800 text-xs text-gray-400 font-bold">
+                                    <div
+                                        class="grid grid-cols-5 gap-2 p-4 border-b border-slate-800 text-xs text-gray-400 font-bold">
                                         <div class="col-span-1"> </div>
                                         <div class="text-center">Ninguno</div>
                                         <div class="text-center">Ver</div>
@@ -368,18 +395,21 @@
                                     </div>
 
                                     <template x-for="row in roleTabs" :key="row.key">
-                                        <div class="grid grid-cols-5 gap-2 p-4 border-b border-slate-800 last:border-b-0 items-center">
+                                        <div
+                                            class="grid grid-cols-5 gap-2 p-4 border-b border-slate-800 last:border-b-0 items-center">
                                             <div class="col-span-1 flex items-center gap-3 text-white font-semibold">
                                                 <span class="text-gray-300" x-text="row.icon"></span>
                                                 <span x-text="row.label"></span>
                                             </div>
 
-                                            <template x-for="opt in ['none','ver','editar','total']" :key="opt">
+                                            <template x-for="opt in ['none','ver','editar','total']"
+                                                :key="opt">
                                                 <button type="button"
                                                     class="h-10 rounded-xl border text-sm font-semibold"
                                                     :class="matrixBtnClass(row.key, opt)"
                                                     @click="setMatrix(row.key, opt)">
-                                                    <span x-text="opt === 'none' ? '⦸' : (opt === 'ver' ? '👁' : (opt === 'editar' ? '✏' : '✔'))"></span>
+                                                    <span
+                                                        x-text="opt === 'none' ? '⦸' : (opt === 'ver' ? '👁' : (opt === 'editar' ? '✏' : '✔'))"></span>
                                                 </button>
                                             </template>
                                         </div>
@@ -394,12 +424,14 @@
                         <div class="text-white font-extrabold text-lg">Permisos de Módulos del Sistema</div>
 
                         <template x-for="m in systemModules" :key="m.key">
-                            <label class="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 cursor-pointer">
+                            <label
+                                class="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 cursor-pointer">
                                 <input type="checkbox"
                                     class="w-5 h-5 rounded bg-slate-950 border-slate-700 text-purple-600 focus:ring-purple-500"
                                     x-model="roleMatrix.system[m.key]">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center" :class="m.iconClass">
+                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center"
+                                        :class="m.iconClass">
                                         <span x-text="m.icon"></span>
                                     </div>
                                     <div>
@@ -430,58 +462,14 @@
         </div>
 
         {{-- =========================
-             MODAL: ELIMINAR ROL (NUEVO)
+             MODAL: VER / EDITAR / ELIMINAR USUARIO (igual que tu base)
         ========================== --}}
-        <div x-show="modalRoleDelete" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="modalView" style="display:none;"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
 
-            <div class="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
-                <div class="p-6 border-b border-slate-800 bg-slate-950 flex items-start justify-between gap-4">
-                    <div>
-                        <div class="text-white text-2xl font-extrabold">Eliminar Rol</div>
-                        <div class="text-gray-400 text-sm mt-1">Esta acción no se puede deshacer</div>
-                    </div>
-
-                    <button type="button"
-                        class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
-                        @click="closeAll()">
-                        ✕
-                    </button>
-                </div>
-
-                <div class="p-6">
-                    <div class="rounded-2xl border border-red-800 bg-red-600/10 p-4 text-red-200">
-                        ¿Seguro que quieres eliminar el rol
-                        <span class="font-extrabold text-white" x-text="selectedRole?.name ?? ''"></span>?
-                    </div>
-                    <div class="mt-3 text-xs text-gray-500" x-show="!!selectedRole?.protegido">
-                        Este rol está marcado como protegido; si tu backend lo bloquea, verás un error.
-                    </div>
-                </div>
-
-                <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-3">
-                    <button type="button"
-                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
-                        @click="closeAll()">
-                        Cancelar
-                    </button>
-
-                    <button type="button"
-                        class="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold"
-                        @click="confirmRoleDelete()">
-                        Eliminar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        {{-- =========================
-             MODAL: VER / EDITAR / ELIMINAR USUARIO
-        ========================== --}}
-        <div x-show="modalView" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
-
-            <div class="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
+            <div class="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden"
+                @click.stop>
                 <div class="p-6 border-b border-slate-800 bg-slate-950 flex items-start justify-between gap-4">
                     <div>
                         <div class="text-white text-2xl font-extrabold">Detalle de Usuario</div>
@@ -504,7 +492,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-gray-200">
                             <div class="text-sm text-gray-400">Usuario</div>
-                            <div class="font-semibold text-white" x-text="selectedUser?.username ? '@'+selectedUser.username : '-'"></div>
+                            <div class="font-semibold text-white"
+                                x-text="selectedUser?.username ? '@'+selectedUser.username : '-'"></div>
                         </div>
 
                         <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-gray-200">
@@ -521,7 +510,8 @@
 
                         <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-gray-200">
                             <div class="text-sm text-gray-400">Estado</div>
-                            <div class="font-semibold" :class="selectedUser?.is_active ? 'text-green-400' : 'text-red-400'"
+                            <div class="font-semibold"
+                                :class="selectedUser?.is_active ? 'text-green-400' : 'text-red-400'"
                                 x-text="selectedUser?.is_active ? 'Activo' : 'Inactivo'"></div>
                         </div>
                     </div>
@@ -537,10 +527,12 @@
             </div>
         </div>
 
-        <div x-show="modalEdit" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="modalEdit" style="display:none;"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
 
-            <div class="relative w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
+            <div class="relative w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden"
+                @click.stop>
                 <div class="p-6 border-b border-slate-800 bg-slate-950 flex items-start justify-between gap-4">
                     <div>
                         <div class="text-white text-2xl font-extrabold">Editar Usuario</div>
@@ -628,10 +620,12 @@
             </div>
         </div>
 
-        <div x-show="modalDelete" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div x-show="modalDelete" style="display:none;"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
 
-            <div class="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
+            <div class="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden"
+                @click.stop>
                 <div class="p-6 border-b border-slate-800 bg-slate-950 flex items-start justify-between gap-4">
                     <div>
                         <div class="text-white text-2xl font-extrabold">Eliminar Usuario</div>
@@ -669,7 +663,7 @@
         </div>
 
         {{-- =========================
-             Alpine logic (ACTUALIZADO)
+             Alpine logic
         ========================== --}}
         <script>
             function usuariosPage(tabFromServer, usersFromServer, rolesFromServer, rolesFullFromServer, permisosByModuloFromServer, routesFromServer, csrfFromServer) {
@@ -702,30 +696,84 @@
                     roleAccordion: false,
 
                     // role colors
-                    roleColors: [
-                        { value: 'Púrpura', label: 'Púrpura' },
-                        { value: 'Azul', label: 'Azul' },
-                        { value: 'Verde', label: 'Verde' },
-                        { value: 'Rojo', label: 'Rojo' },
-                        { value: 'Naranja', label: 'Naranja' },
-                        { value: 'Gris', label: 'Gris' },
+                    roleColors: [{
+                            value: 'Púrpura',
+                            label: 'Púrpura'
+                        },
+                        {
+                            value: 'Azul',
+                            label: 'Azul'
+                        },
+                        {
+                            value: 'Verde',
+                            label: 'Verde'
+                        },
+                        {
+                            value: 'Rojo',
+                            label: 'Rojo'
+                        },
+                        {
+                            value: 'Naranja',
+                            label: 'Naranja'
+                        },
+                        {
+                            value: 'Gris',
+                            label: 'Gris'
+                        },
                     ],
 
                     // matrix tabs (para el acordeón)
-                    roleTabs: [
-                        { key: 'registro', icon: '⬣', label: 'Registro' },
-                        { key: 'liberacion', icon: '🔓', label: 'Liberación' },
-                        { key: 'docs', icon: '✈️', label: 'Envío de Docs' },
-                        { key: 'cotizacion', icon: '$', label: 'Cotización Agencia' },
-                        { key: 'despacho', icon: '🚚', label: 'Despacho' },
-                        { key: 'gastos', icon: '🧾', label: 'Gastos' },
+                    roleTabs: [{
+                            key: 'registro',
+                            icon: '⬣',
+                            label: 'Registro'
+                        },
+                        {
+                            key: 'liberacion',
+                            icon: '🔓',
+                            label: 'Liberación'
+                        },
+                        {
+                            key: 'docs',
+                            icon: '✈️',
+                            label: 'Envío de Docs'
+                        },
+                        {
+                            key: 'cotizacion',
+                            icon: '$',
+                            label: 'Cotización Agencia'
+                        },
+                        {
+                            key: 'despacho',
+                            icon: '🚚',
+                            label: 'Despacho'
+                        },
+                        {
+                            key: 'gastos',
+                            icon: '🧾',
+                            label: 'Gastos'
+                        },
                     ],
 
                     // módulos del sistema (checks)
-                    systemModules: [
-                        { key: 'reportes', label: 'Administrar Reportes', icon: '🧾', iconClass: 'text-orange-300' },
-                        { key: 'usuarios', label: 'Administrar Usuarios', icon: '👥', iconClass: 'text-purple-300' },
-                        { key: 'actividad', label: 'Administrar Actividad', icon: '∿', iconClass: 'text-cyan-300' },
+                    systemModules: [{
+                            key: 'reportes',
+                            label: 'Administrar Reportes',
+                            icon: '🧾',
+                            iconClass: 'text-orange-300'
+                        },
+                        {
+                            key: 'usuarios',
+                            label: 'Administrar Usuarios',
+                            icon: '👥',
+                            iconClass: 'text-purple-300'
+                        },
+                        {
+                            key: 'actividad',
+                            label: 'Administrar Actividad',
+                            icon: '∿',
+                            iconClass: 'text-cyan-300'
+                        },
                     ],
 
                     // forms
@@ -777,84 +825,49 @@
                         // nada por ahora
                     },
 
-                    // ====== helper: errores laravel (mejor UX) ======
+                    // ====== helper para errores Laravel 422 ======
                     formatLaravelErrors(errors) {
-                        if (!errors || typeof errors !== 'object') return null;
-                        const lines = [];
-                        Object.keys(errors).forEach((k) => {
-                            const arr = errors[k];
-                            if (Array.isArray(arr)) arr.forEach(m => lines.push(m));
-                        });
-                        return lines.length ? lines.join("\n") : null;
-                    },
-
-                    // ====== helper: permisos -> matrix (para editar sin sobrescribir) ======
-                    permisosToMatrix(perms) {
-                        const base = {
-                            create_contenedores: false,
-                            tabs: {
-                                registro: 'none',
-                                liberacion: 'none',
-                                docs: 'none',
-                                cotizacion: 'none',
-                                despacho: 'none',
-                                gastos: 'none',
-                            },
-                            system: { reportes: false, usuarios: false, actividad: false },
-                        };
-
-                        if (!Array.isArray(perms) || perms.length === 0) return base;
-
-                        const norm = (s) => (s ?? '').toString().toLowerCase().trim();
-
-                        // crear contenedores
-                        base.create_contenedores = perms.some(p => norm(p?.modulo) === 'contenedores' && norm(p?.tipo) === 'crear');
-
-                        // tabs: decide el nivel con base en tipos presentes
-                        const tabs = ['registro','liberacion','docs','cotizacion','despacho','gastos'];
-                        tabs.forEach((t) => {
-                            const tipos = perms
-                                .filter(p => norm(p?.modulo) === norm(t))
-                                .map(p => norm(p?.tipo));
-
-                            // orden: total > editar > ver > none
-                            if (tipos.includes('total') || tipos.includes('eliminar') || tipos.includes('crear')) base.tabs[t] = 'total';
-                            else if (tipos.includes('editar')) base.tabs[t] = 'editar';
-                            else if (tipos.includes('ver')) base.tabs[t] = 'ver';
-                            else base.tabs[t] = 'none';
-                        });
-
-                        // system: true si hay cualquier permiso del módulo
-                        ['reportes','usuarios','actividad'].forEach((k) => {
-                            base.system[k] = perms.some(p => norm(p?.modulo) === norm(k));
-                        });
-
-                        return base;
+                        try {
+                            if (!errors || typeof errors !== 'object') return null;
+                            const lines = [];
+                            Object.keys(errors).forEach(k => {
+                                const arr = errors[k];
+                                if (Array.isArray(arr)) arr.forEach(msg => lines.push(`• ${msg}`));
+                            });
+                            return lines.length ? lines.join('\n') : null;
+                        } catch (e) {
+                            return null;
+                        }
                     },
 
                     // ====== colors (usuarios cards) ======
                     roleBg(u) {
                         const c = (u?.role_color ?? '').toLowerCase();
-                        if (c.includes('púrpura') || c.includes('purpura') || c.includes('purple')) return 'rgba(168,85,247,0.22)';
+                        if (c.includes('púrpura') || c.includes('purpura') || c.includes('purple'))
+                            return 'rgba(168,85,247,0.22)';
                         if (c.includes('verde') || c.includes('green')) return 'rgba(34,197,94,0.22)';
                         if (c.includes('azul') || c.includes('blue')) return 'rgba(59,130,246,0.22)';
                         return 'rgba(59,130,246,0.22)';
                     },
                     roleBorder(u) {
                         const c = (u?.role_color ?? '').toLowerCase();
-                        if (c.includes('púrpura') || c.includes('purpura') || c.includes('purple')) return 'rgba(168,85,247,0.55)';
+                        if (c.includes('púrpura') || c.includes('purpura') || c.includes('purple'))
+                            return 'rgba(168,85,247,0.55)';
                         if (c.includes('verde') || c.includes('green')) return 'rgba(34,197,94,0.55)';
                         if (c.includes('azul') || c.includes('blue')) return 'rgba(59,130,246,0.55)';
                         return 'rgba(59,130,246,0.55)';
                     },
                     rolePillBg(u) {
                         const c = (u?.role_color ?? '').toLowerCase();
-                        if (c.includes('púrpura') || c.includes('purpura') || c.includes('purple')) return 'rgba(168,85,247,0.95)';
+                        if (c.includes('púrpura') || c.includes('purpura') || c.includes('purple'))
+                            return 'rgba(168,85,247,0.95)';
                         if (c.includes('verde') || c.includes('green')) return 'rgba(34,197,94,0.95)';
                         if (c.includes('azul') || c.includes('blue')) return 'rgba(59,130,246,0.95)';
                         return 'rgba(59,130,246,0.95)';
                     },
-                    rolePillText(u) { return '#ffffff'; },
+                    rolePillText(u) {
+                        return '#ffffff';
+                    },
 
                     // ====== roles helper (hex-ish for shadows) ======
                     roleColorHex(r) {
@@ -869,6 +882,8 @@
                     },
 
                     roleChips(role) {
+                        // Genera chips tipo "Registro: Total" "Docs: Ver" etc.
+                        // Si no hay permisos aún, devuelve vacío para no romper.
                         const list = role?.permisos ?? [];
                         if (!Array.isArray(list) || list.length === 0) return [];
 
@@ -881,6 +896,7 @@
                             return (t ?? 'Permiso');
                         };
 
+                        // Agrupa por modulo y muestra “modulo: tipos...”
                         const grouped = {};
                         list.forEach(p => {
                             const mod = (p.modulo ?? 'General');
@@ -891,7 +907,11 @@
                         return Object.keys(grouped).map(mod => {
                             const types = Array.from(grouped[mod]).join(', ');
                             const label = `${this.prettyModulo(mod)}: ${types}`;
-                            return { key: mod, label, class: 'bg-emerald-600/10 text-emerald-200 border border-emerald-600/20' };
+                            return {
+                                key: mod,
+                                label,
+                                class: 'bg-emerald-600/10 text-emerald-200 border border-emerald-600/20'
+                            };
                         });
                     },
 
@@ -916,7 +936,11 @@
                     matrixBtnClass(tabKey, option) {
                         const current = this.roleMatrix.tabs[tabKey] ?? 'none';
                         const active = current === option;
-                        if (active) return 'bg-slate-300/40 border-slate-200/30 text-white';
+
+                        // estilo como tus capturas: activo gris claro, inactivo oscuro
+                        if (active) {
+                            return 'bg-slate-300/40 border-slate-200/30 text-white';
+                        }
                         return 'bg-slate-900/40 border-slate-700/60 text-gray-300 hover:text-white hover:bg-slate-900/70';
                     },
 
@@ -975,15 +999,30 @@
                     openRoleCreate() {
                         this.roleMode = 'create';
                         this.selectedRole = null;
-                        this.roleForm = { id: null, name: '', color: 'Púrpura' };
-
-                        this.roleMatrix = {
-                            create_contenedores: false,
-                            tabs: { registro: 'none', liberacion: 'none', docs: 'none', cotizacion: 'none', despacho: 'none', gastos: 'none' },
-                            system: { reportes: false, usuarios: false, actividad: false },
+                        this.roleForm = {
+                            id: null,
+                            name: '',
+                            color: 'Púrpura'
                         };
 
-                        this.roleAccordion = false;
+                        // reset matrix
+                        this.roleMatrix = {
+                            create_contenedores: false,
+                            tabs: {
+                                registro: 'none',
+                                liberacion: 'none',
+                                docs: 'none',
+                                cotizacion: 'none',
+                                despacho: 'none',
+                                gastos: 'none',
+                            },
+                            system: {
+                                reportes: false,
+                                usuarios: false,
+                                actividad: false
+                            },
+                        };
+
                         this.modalRoleCreate = true;
                     },
                     openRoleEdit(role) {
@@ -995,10 +1034,7 @@
                             color: role.color ?? 'Púrpura',
                         };
 
-                        // ✅ Pre-carga la matriz desde permisos reales (si rolesFull trae "permisos")
-                        this.roleMatrix = this.permisosToMatrix(role?.permisos ?? []);
-                        this.roleAccordion = true;
-
+                        // (solo UI) si luego quieres pre-cargar matriz desde permisos reales lo hacemos en la fase funcional
                         this.modalRoleCreate = true;
                     },
                     openRoleDelete(role) {
@@ -1006,24 +1042,193 @@
                         this.modalRoleDelete = true;
                     },
 
-                    // submits (placeholder)
-                    submitCreate() { alert('Siguiente paso: conectar submitCreate() al backend (usuarios).'); },
-                    submitEdit() { alert('Siguiente paso: conectar submitEdit() al backend (usuarios).'); },
-                    confirmDelete() { alert('Siguiente paso: conectar confirmDelete() al backend (usuarios).'); },
+                    // ============================
+                    // USUARIOS (YA FUNCIONAL)
+                    // ============================
+                    async submitCreate() {
+                        try {
+                            const payload = {
+                                name: (this.createForm.name ?? '').trim(),
+                                username: (this.createForm.username ?? '').trim(),
+                                email: (this.createForm.email ?? '').trim() || null,
+                                role_id: this.createForm.role_id || null,
+                                password: this.createForm.password ?? '',
+                                password_confirmation: this.createForm.password_confirmation ?? '',
+                                is_active: this.createForm.is_active ? 1 : 0,
+                            };
 
+                            if (!payload.name || !payload.username || !payload.role_id || !payload.password) {
+                                alert('Completa: Nombre, Usuario, Rol y Contraseña.');
+                                return;
+                            }
+
+                            const res = await fetch(this.routes.usersStore, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrf,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: JSON.stringify(payload),
+                            });
+
+                            let data = {};
+                            try {
+                                data = await res.json();
+                            } catch (e) {
+                                data = {};
+                            }
+
+                            if (!res.ok || data.ok === false) {
+                                if (res.status === 422) {
+                                    alert(this.formatLaravelErrors(data.errors) ?? data.message ?? 'Validación fallida.');
+                                    return;
+                                }
+                                alert(data.message ?? `No se pudo crear el usuario. (HTTP ${res.status})`);
+                                return;
+                            }
+
+                            const saved = data.user;
+
+                            // Insertar en UI
+                            this.users.unshift(saved);
+
+                            this.closeAll();
+                        } catch (e) {
+                            console.error(e);
+                            alert('Error inesperado creando usuario.');
+                        }
+                    },
+
+                    async submitEdit() {
+                        try {
+                            if (!this.selectedUser?.id) {
+                                alert('No hay usuario seleccionado.');
+                                return;
+                            }
+
+                            const payload = {
+                                name: (this.editForm.name ?? '').trim(),
+                                username: (this.editForm.username ?? '').trim(),
+                                email: (this.editForm.email ?? '').trim() || null,
+                                role_id: this.editForm.role_id || null,
+                                is_active: this.editForm.is_active ? 1 : 0,
+                                password: (this.editForm.password ?? '').trim() || null,
+                                password_confirmation: (this.editForm.password_confirmation ?? '').trim() || null,
+                            };
+
+                            if (!payload.name || !payload.username || !payload.role_id) {
+                                alert('Completa: Nombre, Usuario y Rol.');
+                                return;
+                            }
+
+                            const url = `${this.routes.usersUpdate}/${this.selectedUser.id}`;
+
+                            const res = await fetch(url, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrf,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: JSON.stringify(payload),
+                            });
+
+                            let data = {};
+                            try {
+                                data = await res.json();
+                            } catch (e) {
+                                data = {};
+                            }
+
+                            if (!res.ok || data.ok === false) {
+                                if (res.status === 422) {
+                                    alert(this.formatLaravelErrors(data.errors) ?? data.message ?? 'Validación fallida.');
+                                    return;
+                                }
+                                alert(data.message ?? `No se pudo actualizar el usuario. (HTTP ${res.status})`);
+                                return;
+                            }
+
+                            const saved = data.user;
+
+                            // Reemplazar en UI
+                            const idx = this.users.findIndex(u => u.id === saved.id);
+                            if (idx >= 0) this.users.splice(idx, 1, saved);
+
+                            this.closeAll();
+                        } catch (e) {
+                            console.error(e);
+                            alert('Error inesperado actualizando usuario.');
+                        }
+                    },
+
+                    async confirmDelete() {
+                        try {
+                            if (!this.selectedUser?.id) {
+                                alert('No hay usuario seleccionado.');
+                                return;
+                            }
+
+                            const url = `${this.routes.usersDestroy}/${this.selectedUser.id}`;
+
+                            const res = await fetch(url, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrf,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            });
+
+                            let data = {};
+                            try {
+                                data = await res.json();
+                            } catch (e) {
+                                data = {};
+                            }
+
+                            if (!res.ok || data.ok === false) {
+                                alert(data.message ?? `No se pudo eliminar el usuario. (HTTP ${res.status})`);
+                                return;
+                            }
+
+                            const id = this.selectedUser.id;
+                            const idx = this.users.findIndex(u => u.id === id);
+                            if (idx >= 0) this.users.splice(idx, 1);
+
+                            this.closeAll();
+                        } catch (e) {
+                            console.error(e);
+                            alert('Error inesperado eliminando usuario.');
+                        }
+                    },
+
+                    // ============================
+                    // ROLES (como ya lo tenías)
+                    // ============================
                     async submitRole() {
                         try {
+                            // validación mínima
                             const name = (this.roleForm.name ?? '').trim();
-                            if (!name) { alert('Escribe el nombre del rol.'); return; }
+                            if (!name) {
+                                alert('Escribe el nombre del rol.');
+                                return;
+                            }
 
                             const payload = {
                                 name: name,
                                 color: this.roleForm.color ?? 'Púrpura',
-                                matrix: this.roleMatrix,
+                                matrix: this.roleMatrix, // tal cual tu UI
                             };
 
                             const isEdit = this.roleMode === 'edit' && this.roleForm.id;
-                            const url = isEdit ? `${this.routes.rolesUpdate}/${this.roleForm.id}` : this.routes.rolesStore;
+                            const url = isEdit ?
+                                `${this.routes.rolesUpdate}/${this.roleForm.id}` :
+                                this.routes.rolesStore;
+
                             const method = isEdit ? 'PUT' : 'POST';
 
                             const res = await fetch(url, {
@@ -1037,28 +1242,28 @@
                                 body: JSON.stringify(payload),
                             });
 
-                            let data = {};
-                            try { data = await res.json(); } catch (e) { data = {}; }
+                            const data = await res.json().catch(() => ({}));
 
                             if (!res.ok || data.ok === false) {
-                                if (res.status === 422) {
-                                    alert(this.formatLaravelErrors(data.errors) ?? data.message ?? 'Validación fallida.');
-                                    return;
-                                }
-                                alert(data.message ?? `No se pudo guardar el rol. (HTTP ${res.status})`);
+                                alert(data.message ?? 'No se pudo guardar el rol.');
                                 return;
                             }
 
+                            // backend devuelve role "full"
                             const saved = data.role;
 
-                            // actualizar rolesFull
+                            // actualizar rolesFull (cards)
                             const idx = this.rolesFull.findIndex(r => r.id === saved.id);
                             if (idx >= 0) this.rolesFull.splice(idx, 1, saved);
                             else this.rolesFull.unshift(saved);
 
-                            // actualizar roles simples (selects)
+                            // actualizar roles simples (para selects de usuario)
                             const idx2 = this.roles.findIndex(r => r.id === saved.id);
-                            const simple = { id: saved.id, name: saved.name, color: saved.color };
+                            const simple = {
+                                id: saved.id,
+                                name: saved.name,
+                                color: saved.color
+                            };
                             if (idx2 >= 0) this.roles.splice(idx2, 1, simple);
                             else this.roles.push(simple);
 
@@ -1066,50 +1271,6 @@
                         } catch (e) {
                             console.error(e);
                             alert('Error inesperado guardando rol.');
-                        }
-                    },
-
-                    async confirmRoleDelete() {
-                        try {
-                            if (!this.selectedRole?.id) { alert('No hay rol seleccionado.'); return; }
-
-                            const url = `${this.routes.rolesDestroy}/${this.selectedRole.id}`;
-
-                            const res = await fetch(url, {
-                                method: 'DELETE',
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'X-CSRF-TOKEN': this.csrf,
-                                    'X-Requested-With': 'XMLHttpRequest',
-                                }
-                            });
-
-                            let data = {};
-                            try { data = await res.json(); } catch (e) { data = {}; }
-
-                            if (!res.ok || data.ok === false) {
-                                if (res.status === 422) {
-                                    alert(this.formatLaravelErrors(data.errors) ?? data.message ?? 'No se pudo eliminar.');
-                                    return;
-                                }
-                                alert(data.message ?? `No se pudo eliminar el rol. (HTTP ${res.status})`);
-                                return;
-                            }
-
-                            const id = this.selectedRole.id;
-
-                            // quitar de rolesFull
-                            const i1 = this.rolesFull.findIndex(r => r.id === id);
-                            if (i1 >= 0) this.rolesFull.splice(i1, 1);
-
-                            // quitar de roles simples
-                            const i2 = this.roles.findIndex(r => r.id === id);
-                            if (i2 >= 0) this.roles.splice(i2, 1);
-
-                            this.closeAll();
-                        } catch (e) {
-                            console.error(e);
-                            alert('Error inesperado eliminando rol.');
                         }
                     },
                 }

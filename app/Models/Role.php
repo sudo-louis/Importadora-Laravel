@@ -3,35 +3,31 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Role extends Model
 {
-    // ✅ Escenario A
+    // ✅ Tu BD real
     protected $table = 'roles';
 
-    // ✅ agrega lo que realmente usas
-    protected $fillable = ['name', 'color', 'description'];
+    protected $fillable = ['name', 'color'];
 
-    public function permisos(): BelongsToMany
+    public function users()
     {
-        // ✅ pivote: role_permiso
         return $this->belongsToMany(
-            Permiso::class,
-            'role_permiso',
+            User::class,
+            'user_role',   // ✅ pivote real
             'role_id',
-            'permiso_id'
+            'user_id'
         )->withTimestamps();
     }
 
-    public function users(): BelongsToMany
+    public function permisos()
     {
-        // ✅ pivote: user_role
         return $this->belongsToMany(
-            User::class,
-            'user_role',
+            Permiso::class,
+            'role_permiso', // ✅ pivote real
             'role_id',
-            'user_id'
+            'permiso_id'
         )->withTimestamps();
     }
 }

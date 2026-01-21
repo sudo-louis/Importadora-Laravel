@@ -3,24 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permiso extends Model
 {
-    // ✅ Escenario A
+    // ✅ Tu BD real
     protected $table = 'permisos';
 
-    protected $fillable = [
-        'name',
-        'modulo',
-        'tipo',
-    ];
+    protected $fillable = ['name', 'modulo', 'tipo'];
 
-    public function roles(): BelongsToMany
+    public function roles()
     {
         return $this->belongsToMany(
             Role::class,
-            'role_permiso',
+            'role_permiso', // ✅ pivote real
             'permiso_id',
             'role_id'
         )->withTimestamps();
