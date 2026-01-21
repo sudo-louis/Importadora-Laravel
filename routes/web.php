@@ -13,7 +13,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Vistas simples (ok)
+    // Vistas simples
     Route::view('/contenedores', 'contenedores.index')->name('contenedores.index');
     Route::view('/plantillas', 'plantillas.index')->name('plantillas.index');
     Route::view('/actividad/contenedores', 'actividad.contenedores')->name('actividad.contenedores');
@@ -51,15 +51,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reportes/autocomplete/clientes', [ReportesController::class, 'autocompleteClientes'])->name('reportes.autocomplete.clientes');
     Route::get('/reportes/autocomplete/contenedores', [ReportesController::class, 'autocompleteContenedores'])->name('reportes.autocomplete.contenedores');
 
-    // ====== USUARIOS + ROLES (misma pantalla) ======
+    // Usuarios (vista principal con tabs usuarios/roles)
     Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
+    Route::get('/usuarios/data', [UsuariosController::class, 'data'])->name('usuarios.data');
 
-    // Usuarios (dejamos rutas listas, aunque luego conectas front)
+    // Usuarios (CRUD - luego lo conectas completo)
     Route::post('/usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
     Route::put('/usuarios/{user}', [UsuariosController::class, 'update'])->name('usuarios.update');
     Route::delete('/usuarios/{user}', [UsuariosController::class, 'destroy'])->name('usuarios.destroy');
 
-    // Roles (FUNCIONAL)
+    // Roles (CRUD funcional)
     Route::post('/roles', [UsuariosController::class, 'rolesStore'])->name('roles.store');
     Route::put('/roles/{role}', [UsuariosController::class, 'rolesUpdate'])->name('roles.update');
     Route::delete('/roles/{role}', [UsuariosController::class, 'rolesDestroy'])->name('roles.destroy');

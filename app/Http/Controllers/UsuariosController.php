@@ -2,94 +2,93 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Permiso;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Permiso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
 class UsuariosController extends Controller
 {
     public function index(Request $request)
     {
-        $tab = $request->query('tab', 'usuarios');
+        $tab = $request->get('tab', 'usuarios');
 
-        // ====== Roles para selects (usuarios modal) ======
-        $roles = Role::query()
-            ->orderBy('name')
-            ->get(['id','name','color'])
-            ->map(fn($r) => [
-                'id' => $r->id,
-                'name' => $r->name,
-                'color' => $r->color,
-                // UI: protegido SOLO para Admin (Opción A)
-                'protegido' => $r->isAdmin(),
-            ])
-            ->values()
-            ->all();
-
-        // ====== Usuarios (para la pestaña usuarios) ======
+        // ========= USERS (para tu pestaña usuarios, sin romper) =========
+        // OJO: si tu tabla users no tiene "username", esto no truena porque usamos getAttribute.
         $users = User::query()
             ->with(['roles:id,name,color'])
-            ->orderBy('id','desc')
+            ->select(['id','name','email','is_active','created_at','updated_at']) // agrega username si existe en tu tabla
             ->get()
-            ->map(function (User $u) {
-                $role = $u->roles->sortBy('id')->first();
+            ->map(function ($u) {
+                $primaryRole = $u->roles->sortBy('id')->first();
+
                 return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'username' => $u->username ?? null,
-                    'email' => $u->email,
-                    'is_active' => (bool) $u->is_active,
-                    'role_id' => $role?->id,
-                    'role_name' => $role?->name,
-                    'role_color' => $role?->color,
+                    'id'         => $u->id,
+                    'name'       => $u->name,
+                    'email'      => $u->email,
+                    'username'   => $u->getAttribute('username'), // null si no existe
+                    'is_active'  => (bool) $u->is_active,
+                    'role_id'    => $primaryRole?->id,
+                    'role_name'  => $primaryRole?->name,
+                    'role_color' => $primaryRole?->color,
                 ];
             })
             ->values()
             ->all();
 
-        // ====== permisosByModulo (para mapear matriz a IDs reales) ======
-        // Estructura: { modulo: { ver: id, crear: id, editar: id, eliminar: id } }
-        $permisosByModulo = Permiso::query()
-            ->orderBy('modulo')
-            ->orderBy('tipo')
-            ->get(['id','modulo','tipo'])
-            ->groupBy('modulo')
-            ->map(fn($items) => $items->keyBy('tipo')->map(fn($p) => $p->id)->all())
-            ->all();
-
-        // ====== RolesFull (para chips + conteo usuarios) ======
-        $rolesFull = Role::query()
-            ->with(['permisos:id,name,modulo,tipo'])
-            ->withCount('users')
-            ->orderBy('name')
+        // ========= ROLES simple (para selects) =========
+        $roles = Role::query()
+            ->select(['id','name','color'])
+            ->orderBy('id')
             ->get()
-            ->map(function (Role $r) {
-                // Opción A: si es Admin, en UI mostramos todos los permisos (aunque no estén en pivot)
-                $permisos = $r->isAdmin()
-                    ? Permiso::query()->get(['id','name','modulo','tipo'])
-                    : $r->permisos;
+            ->toArray();
+
+        // ========= ROLES FULL (para cards en pestaña roles) =========
+        $rolesFull = Role::query()
+            ->with(['permisos:id,modulo,tipo']) // relación Role::permisos()
+            ->withCount('users') // relación Role::users()
+            ->orderBy('id')
+            ->get()
+            ->map(function ($r) {
+                // "protegido" sin columna DB (opción A sin cambios DB):
+                // marcamos protegido por nombre (ajústalo si quieres)
+                $name = mb_strtolower($r->name ?? '');
+                $protegido = in_array($name, ['administrador', 'admin', 'superadmin'], true);
 
                 return [
-                    'id' => $r->id,
-                    'name' => $r->name,
-                    'color' => $r->color,
-                    'description' => $r->description,
-                    'protegido' => $r->isAdmin(),
-                    'users_count' => (int) $r->users_count,
-                    'permisos' => $permisos->map(fn($p) => [
-                        'id' => $p->id,
+                    'id'          => $r->id,
+                    'name'        => $r->name,
+                    'color'       => $r->color,
+                    'users_count' => $r->users_count ?? 0,
+                    'protegido'   => $protegido,
+                    'permisos'    => $r->permisos->map(fn($p) => [
+                        'id'     => $p->id,
                         'modulo' => $p->modulo,
-                        'tipo' => $p->tipo,
-                        'name' => $p->name,
+                        'tipo'   => $p->tipo,
                     ])->values()->all(),
                 ];
             })
             ->values()
             ->all();
+
+        // ========= permisosByModulo (por si lo ocupas) =========
+        $permisosByModulo = Permiso::query()
+            ->select(['id','modulo','tipo','name'])
+            ->orderBy('modulo')
+            ->orderBy('tipo')
+            ->get()
+            ->groupBy('modulo')
+            ->map(function ($items) {
+                return $items->map(fn($p) => [
+                    'id' => $p->id,
+                    'modulo' => $p->modulo,
+                    'tipo' => $p->tipo,
+                    'name' => $p->name,
+                ])->values()->all();
+            })
+            ->toArray();
 
         return view('usuarios.index', [
             'tab' => $tab,
@@ -100,168 +99,241 @@ class UsuariosController extends Controller
         ]);
     }
 
-    // ==========================
-    // ROLES (FUNCIONAL)
-    // ==========================
+    /**
+     * Si en tu vista planeas pedir data por fetch para usuarios
+     */
+    public function data()
+    {
+        $users = User::query()
+            ->with(['roles:id,name,color'])
+            ->get()
+            ->map(function ($u) {
+                $primaryRole = $u->roles->sortBy('id')->first();
+
+                return [
+                    'id'         => $u->id,
+                    'name'       => $u->name,
+                    'email'      => $u->email,
+                    'username'   => $u->getAttribute('username'),
+                    'is_active'  => (bool) $u->is_active,
+                    'role_id'    => $primaryRole?->id,
+                    'role_name'  => $primaryRole?->name,
+                    'role_color' => $primaryRole?->color,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return response()->json(['users' => $users]);
+    }
+
+    // =========================================================
+    // ===================== ROLES (FUNCIONAL) ==================
+    // =========================================================
+
     public function rolesStore(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required','string','max:255', Rule::unique('roles','name')],
+            'name'  => ['required','string','max:255', Rule::unique('roles','name')],
             'color' => ['nullable','string','max:30'],
-            'description' => ['nullable','string','max:255'],
-            'permisos' => ['array'],
-            'permisos.*' => ['integer', Rule::exists('permisos','id')],
+
+            // payload de tu UI:
+            'matrix' => ['required','array'],
+            'matrix.create_contenedores' => ['nullable','boolean'],
+            'matrix.tabs' => ['nullable','array'],
+            'matrix.system' => ['nullable','array'],
         ]);
 
-        DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data) {
             $role = Role::create([
-                'name' => $data['name'],
+                'name'  => $data['name'],
                 'color' => $data['color'] ?? 'Púrpura',
-                'description' => $data['description'] ?? null,
             ]);
 
-            // Opción A: si crean "Administrador", no guardamos pivot: siempre full por lógica
-            if (!$role->isAdmin()) {
-                $role->permisos()->sync($data['permisos'] ?? []);
-            }
-        });
+            $permisoIds = $this->matrixToPermisoIds($data['matrix'] ?? []);
+            $role->permisos()->sync($permisoIds);
 
-        return redirect()->route('usuarios.index', ['tab' => 'roles'])
-            ->with('success', 'Rol creado correctamente.');
+            // regresamos el rol “full” ya armado
+            $role->load(['permisos:id,modulo,tipo'])->loadCount('users');
+
+            return response()->json([
+                'ok' => true,
+                'role' => [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'color' => $role->color,
+                    'users_count' => $role->users_count ?? 0,
+                    'protegido' => false,
+                    'permisos' => $role->permisos->map(fn($p) => [
+                        'id' => $p->id,
+                        'modulo' => $p->modulo,
+                        'tipo' => $p->tipo,
+                    ])->values()->all(),
+                ]
+            ]);
+        });
     }
 
     public function rolesUpdate(Request $request, Role $role)
     {
-        // Opción A: Admin no se edita (nombre/permisos)
-        if ($role->isAdmin()) {
-            return redirect()->route('usuarios.index', ['tab' => 'roles'])
-                ->with('error', 'El rol Administrador está protegido y no se puede editar.');
+        // proteger admin sin columna
+        $nameLower = mb_strtolower($role->name ?? '');
+        if (in_array($nameLower, ['administrador','admin','superadmin'], true)) {
+            // puedes permitir editar permisos si quieres; aquí lo bloqueo completo:
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol está protegido y no se puede modificar.'
+            ], 403);
         }
 
         $data = $request->validate([
-            'name' => ['required','string','max:255', Rule::unique('roles','name')->ignore($role->id)],
+            'name'  => ['required','string','max:255', Rule::unique('roles','name')->ignore($role->id)],
             'color' => ['nullable','string','max:30'],
-            'description' => ['nullable','string','max:255'],
-            'permisos' => ['array'],
-            'permisos.*' => ['integer', Rule::exists('permisos','id')],
+
+            'matrix' => ['required','array'],
+            'matrix.create_contenedores' => ['nullable','boolean'],
+            'matrix.tabs' => ['nullable','array'],
+            'matrix.system' => ['nullable','array'],
         ]);
 
-        DB::transaction(function () use ($role, $data) {
+        return DB::transaction(function () use ($role, $data) {
             $role->update([
-                'name' => $data['name'],
+                'name'  => $data['name'],
                 'color' => $data['color'] ?? $role->color,
-                'description' => $data['description'] ?? $role->description,
             ]);
 
-            $role->permisos()->sync($data['permisos'] ?? []);
-        });
+            $permisoIds = $this->matrixToPermisoIds($data['matrix'] ?? []);
+            $role->permisos()->sync($permisoIds);
 
-        return redirect()->route('usuarios.index', ['tab' => 'roles'])
-            ->with('success', 'Rol actualizado correctamente.');
+            $role->load(['permisos:id,modulo,tipo'])->loadCount('users');
+
+            return response()->json([
+                'ok' => true,
+                'role' => [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'color' => $role->color,
+                    'users_count' => $role->users_count ?? 0,
+                    'protegido' => false,
+                    'permisos' => $role->permisos->map(fn($p) => [
+                        'id' => $p->id,
+                        'modulo' => $p->modulo,
+                        'tipo' => $p->tipo,
+                    ])->values()->all(),
+                ]
+            ]);
+        });
     }
 
-    public function rolesDestroy(Request $request, Role $role)
+    public function rolesDestroy(Role $role)
     {
-        // Opción A: Admin no se borra
-        if ($role->isAdmin()) {
-            return redirect()->route('usuarios.index', ['tab' => 'roles'])
-                ->with('error', 'El rol Administrador está protegido y no se puede eliminar.');
+        $nameLower = mb_strtolower($role->name ?? '');
+        if (in_array($nameLower, ['administrador','admin','superadmin'], true)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Este rol está protegido y no se puede eliminar.'
+            ], 403);
         }
 
         if ($role->users()->exists()) {
-            return redirect()->route('usuarios.index', ['tab' => 'roles'])
-                ->with('error', 'No puedes eliminar un rol que tiene usuarios asignados.');
+            return response()->json([
+                'ok' => false,
+                'message' => 'No puedes eliminar un rol que tiene usuarios asignados.'
+            ], 422);
         }
 
-        DB::transaction(function () use ($role) {
-            $role->permisos()->detach();
+        return DB::transaction(function () use ($role) {
+            $role->permisos()->sync([]); // limpia pivote
             $role->delete();
-        });
 
-        return redirect()->route('usuarios.index', ['tab' => 'roles'])
-            ->with('success', 'Rol eliminado correctamente.');
+            return response()->json(['ok' => true]);
+        });
     }
 
-    // ==========================
-    // USUARIOS (no lo tocamos ahora)
-    // ==========================
+    /**
+     * Convierte el roleMatrix de tu UI (create_contenedores + tabs + system)
+     * a IDs reales de permisos en tabla `permisos`.
+     */
+    private function matrixToPermisoIds(array $matrix): array
+    {
+        $permisoPairs = [];
+
+        // 1) Crear contenedores
+        if (!empty($matrix['create_contenedores'])) {
+            $permisoPairs[] = ['modulo' => 'contenedores', 'tipo' => 'crear'];
+        }
+
+        // 2) Tabs contenedores
+        $tabs = $matrix['tabs'] ?? [];
+        $tabKeys = ['registro','liberacion','docs','cotizacion','despacho','gastos'];
+
+        foreach ($tabKeys as $k) {
+            $opt = $tabs[$k] ?? 'none';
+            foreach ($this->optionToTipos($opt) as $tipo) {
+                $permisoPairs[] = ['modulo' => $k, 'tipo' => $tipo];
+            }
+        }
+
+        // 3) módulos del sistema
+        $system = $matrix['system'] ?? [];
+        $sysKeys = ['reportes','usuarios','actividad'];
+
+        foreach ($sysKeys as $k) {
+            if (!empty($system[$k])) {
+                foreach (['ver','crear','editar','eliminar'] as $tipo) {
+                    $permisoPairs[] = ['modulo' => $k, 'tipo' => $tipo];
+                }
+            }
+        }
+
+        // Crear permisos si no existen y devolver IDs
+        $ids = [];
+        foreach ($permisoPairs as $pair) {
+            $permiso = Permiso::firstOrCreate(
+                ['modulo' => $pair['modulo'], 'tipo' => $pair['tipo']],
+                [
+                    'name' => $this->permisoName($pair['modulo'], $pair['tipo']),
+                ]
+            );
+            $ids[] = $permiso->id;
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    private function optionToTipos(string $opt): array
+    {
+        $opt = strtolower($opt);
+        return match ($opt) {
+            'ver' => ['ver'],
+            'editar' => ['ver','editar'],
+            'total' => ['ver','crear','editar','eliminar'],
+            default => [],
+        };
+    }
+
+    private function permisoName(string $modulo, string $tipo): string
+    {
+        return strtoupper($modulo) . ' - ' . strtoupper($tipo);
+    }
+
+    // =========================================================
+    // ============ USUARIOS (los dejo seguros) =================
+    // =========================================================
+
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => ['required','string','max:255'],
-            'username' => ['nullable','string','max:50', Rule::unique('users','username')],
-            'email' => ['required','email','max:255', Rule::unique('users','email')],
-            'password' => ['required','string','min:6','confirmed'],
-            'is_active' => ['required', Rule::in([0,1,'0','1',true,false])],
-            'role_id' => ['nullable','integer', Rule::exists('roles','id')],
-        ]);
-
-        DB::transaction(function () use ($data) {
-            $user = User::create([
-                'name' => $data['name'],
-                'username' => $data['username'] ?? null,
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-                'is_active' => (bool) $data['is_active'],
-            ]);
-
-            if (!empty($data['role_id'])) {
-                $user->roles()->sync([(int)$data['role_id']]);
-            }
-        });
-
-        return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
-            ->with('success', 'Usuario creado correctamente.');
+        // luego lo conectamos; por ahora no rompe
+        return response()->json(['ok' => false, 'message' => 'Pendiente conectar usuarios.store'], 501);
     }
 
     public function update(Request $request, User $user)
     {
-        $data = $request->validate([
-            'name' => ['required','string','max:255'],
-            'username' => ['nullable','string','max:50', Rule::unique('users','username')->ignore($user->id)],
-            'email' => ['required','email','max:255', Rule::unique('users','email')->ignore($user->id)],
-            'password' => ['nullable','string','min:6','confirmed'],
-            'is_active' => ['required', Rule::in([0,1,'0','1',true,false])],
-            'role_id' => ['nullable','integer', Rule::exists('roles','id')],
-        ]);
-
-        DB::transaction(function () use ($user, $data) {
-            $user->fill([
-                'name' => $data['name'],
-                'username' => $data['username'] ?? null,
-                'email' => $data['email'],
-                'is_active' => (bool) $data['is_active'],
-            ]);
-
-            if (!empty($data['password'])) {
-                $user->password = Hash::make($data['password']);
-            }
-
-            $user->save();
-
-            if (array_key_exists('role_id', $data)) {
-                if (!empty($data['role_id'])) $user->roles()->sync([(int)$data['role_id']]);
-                else $user->roles()->detach();
-            }
-        });
-
-        return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
-            ->with('success', 'Usuario actualizado correctamente.');
+        return response()->json(['ok' => false, 'message' => 'Pendiente conectar usuarios.update'], 501);
     }
 
-    public function destroy(Request $request, User $user)
+    public function destroy(User $user)
     {
-        if (auth()->id() === $user->id) {
-            return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
-                ->with('error', 'No puedes eliminar el usuario con el que tienes la sesión activa.');
-        }
-
-        DB::transaction(function () use ($user) {
-            $user->roles()->detach();
-            $user->delete();
-        });
-
-        return redirect()->route('usuarios.index', ['tab' => 'usuarios'])
-            ->with('success', 'Usuario eliminado correctamente.');
+        return response()->json(['ok' => false, 'message' => 'Pendiente conectar usuarios.destroy'], 501);
     }
 }

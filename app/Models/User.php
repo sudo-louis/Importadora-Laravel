@@ -11,16 +11,19 @@ class User extends Authenticatable
 {
     use Notifiable;
 
+    // ✅ Escenario A (si no pones $table, Laravel usa "users" por default)
+    protected $table = 'users';
+
     protected $fillable = [
         'name',
-        'username',     // ✅ IMPORTANTE (tu UI lo usa)
+        'username',     // ✅ tu UI lo usa
         'email',
         'password',
         'is_active',
     ];
 
     protected $hidden = [
-        'password','remember_token',
+        'password', 'remember_token',
     ];
 
     protected $casts = [
@@ -30,12 +33,14 @@ class User extends Authenticatable
 
     public function roles(): BelongsToMany
     {
+        // ✅ pivote real: user_role
         return $this->belongsToMany(Role::class, 'user_role', 'user_id', 'role_id')
             ->withTimestamps();
     }
 
     public function primaryRole(): ?Role
     {
+        // ✅ orden por ID del rol
         return $this->roles()->orderBy('roles.id')->first();
     }
 

@@ -9,11 +9,18 @@
         // Para roles/permiso (si el controller ya los manda)
         $rolesFull = $rolesFull ?? [];
         $permisosByModulo = $permisosByModulo ?? [];
+        $routes = [
+            'rolesStore' => route('roles.store'),
+            'rolesUpdate' => url('/roles'), // luego se usa /{id}
+            'rolesDestroy' => url('/roles'), // luego se usa /{id}
+        ];
+
+        $csrf = csrf_token();
     @endphp
 
     <div class="p-6 space-y-6"
-         x-data="usuariosPage(@js($tab), @js($users), @js($roles), @js($rolesFull), @js($permisosByModulo))"
-         x-init="init()">
+        x-data="usuariosPage(@js($tab), @js($users), @js($roles), @js($rolesFull), @js($permisosByModulo), @js($routes), @js($csrf))"
+        x-init="init()">
 
         {{-- Header --}}
         <div class="flex items-start justify-between gap-4">
@@ -33,8 +40,8 @@
             <div class="flex items-center gap-3">
                 <template x-if="activeTab === 'usuarios'">
                     <button type="button"
-                            class="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold inline-flex items-center gap-2"
-                            @click="openCreate()">
+                        class="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold inline-flex items-center gap-2"
+                        @click="openCreate()">
                         <span class="text-lg">👤</span>
                         <span>Agregar Usuario</span>
                     </button>
@@ -42,8 +49,8 @@
 
                 <template x-if="activeTab === 'roles'">
                     <button type="button"
-                            class="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold inline-flex items-center gap-2"
-                            @click="openRoleCreate()">
+                        class="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold inline-flex items-center gap-2"
+                        @click="openRoleCreate()">
                         <span class="text-lg">🛡️</span>
                         <span>Agregar Rol</span>
                     </button>
@@ -55,13 +62,13 @@
         <div class="border-b border-slate-800">
             <div class="flex flex-wrap gap-6 text-gray-300">
                 <a href="{{ route('usuarios.index', ['tab' => 'usuarios']) }}"
-                   class="py-4 inline-flex items-center gap-2 font-semibold
+                    class="py-4 inline-flex items-center gap-2 font-semibold
                           {{ $tab === 'usuarios' ? 'text-blue-400 border-b-2 border-blue-500' : 'hover:text-white' }}">
                     👥 <span>Usuarios</span>
                 </a>
 
                 <a href="{{ route('usuarios.index', ['tab' => 'roles']) }}"
-                   class="py-4 inline-flex items-center gap-2 font-semibold
+                    class="py-4 inline-flex items-center gap-2 font-semibold
                           {{ $tab === 'roles' ? 'text-purple-300 border-b-2 border-purple-500' : 'hover:text-white' }}">
                     🛡️ <span>Roles y Permisos</span>
                 </a>
@@ -79,7 +86,7 @@
                     <div class="rounded-3xl border border-slate-800 bg-slate-900/60 overflow-hidden">
                         <div class="p-7 flex flex-col items-center text-center">
                             <div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-extrabold border"
-                                 :style="`background: ${roleBg(u)}; border-color: ${roleBorder(u)}`">
+                                :style="`background: ${roleBg(u)}; border-color: ${roleBorder(u)}`">
                                 <span class="text-white">👤</span>
                             </div>
 
@@ -87,23 +94,27 @@
                             <div class="mt-1 text-xs text-gray-400" x-text="u.email ?? '—'"></div>
 
                             <div class="mt-3">
-                                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold"
-                                      :style="`background:${rolePillBg(u)}; color:${rolePillText(u)}`">
+                                <span
+                                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold"
+                                    :style="`background:${rolePillBg(u)}; color:${rolePillText(u)}`">
                                     <span x-text="u.role_name ?? 'Sin rol'"></span>
                                 </span>
                             </div>
 
                             <div class="mt-5 flex items-center gap-5 text-gray-300">
-                                <button type="button" class="hover:text-white" title="Ver" @click="openView(u)">👁</button>
-                                <button type="button" class="hover:text-white" title="Editar" @click="openEdit(u)">✏</button>
-                                <button type="button" class="hover:text-white" title="Eliminar" @click="openDelete(u)">🗑</button>
+                                <button type="button" class="hover:text-white" title="Ver"
+                                    @click="openView(u)">👁</button>
+                                <button type="button" class="hover:text-white" title="Editar"
+                                    @click="openEdit(u)">✏</button>
+                                <button type="button" class="hover:text-white" title="Eliminar"
+                                    @click="openDelete(u)">🗑</button>
                             </div>
                         </div>
                     </div>
                 </template>
 
                 <div x-show="users.length === 0" style="display:none;"
-                     class="col-span-full rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center text-gray-400">
+                    class="col-span-full rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center text-gray-400">
                     No hay usuarios para mostrar.
                 </div>
             </div>
@@ -123,20 +134,20 @@
                             <div class="flex items-start justify-between gap-4">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-2xl border border-slate-700 bg-slate-950 flex items-center justify-center"
-                                         :style="`box-shadow: inset 0 0 0 2px ${roleColorHex(r)}33`">
+                                        :style="`box-shadow: inset 0 0 0 2px ${roleColorHex(r)}33`">
                                         <span class="text-white">🛡️</span>
                                     </div>
 
                                     <div>
                                         <div class="text-white font-extrabold flex items-center gap-3">
                                             <span x-text="r.name"></span>
-                                            <span class="text-xs text-gray-400" x-text="`${r.users_count ?? 0} usuario(s)`"></span>
+                                            <span class="text-xs text-gray-400"
+                                                x-text="`${r.users_count ?? 0} usuario(s)`"></span>
                                         </div>
                                         <div class="mt-2 flex flex-wrap gap-2">
                                             <template x-for="chip in roleChips(r).slice(0, 10)" :key="chip.key">
                                                 <span class="px-3 py-1 rounded-xl text-xs font-extrabold"
-                                                      :class="chip.class"
-                                                      x-text="chip.label"></span>
+                                                    :class="chip.class" x-text="chip.label"></span>
                                             </template>
                                         </div>
                                     </div>
@@ -146,16 +157,14 @@
                                     <div class="text-xs text-gray-500" x-show="!!r.protegido">Protegido</div>
 
                                     <button type="button"
-                                            class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-900"
-                                            title="Editar"
-                                            @click="openRoleEdit(r)">
+                                        class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-900"
+                                        title="Editar" @click="openRoleEdit(r)">
                                         ✏
                                     </button>
 
                                     <button type="button"
-                                            class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-900"
-                                            title="Eliminar"
-                                            @click="openRoleDelete(r)">
+                                        class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-900"
+                                        title="Eliminar" @click="openRoleDelete(r)">
                                         🗑
                                     </button>
                                 </div>
@@ -165,7 +174,7 @@
                 </template>
 
                 <div x-show="rolesFull.length === 0" style="display:none;"
-                     class="rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center text-gray-400">
+                    class="rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center text-gray-400">
                     No hay roles configurados.
                 </div>
             </div>
@@ -177,10 +186,12 @@
         <div x-show="modalCreate" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
 
-            <div class="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
+            <div class="relative w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden"
+                @click.stop>
                 <div class="p-6 bg-gradient-to-r from-purple-700 to-fuchsia-600 flex items-start justify-between gap-4">
                     <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                        <div
+                            class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
                             👤
                         </div>
                         <div>
@@ -190,8 +201,8 @@
                     </div>
 
                     <button type="button"
-                            class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 text-white/90 hover:text-white hover:bg-white/15 flex items-center justify-center"
-                            @click="closeAll()">
+                        class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 text-white/90 hover:text-white hover:bg-white/15 flex items-center justify-center"
+                        @click="closeAll()">
                         ✕
                     </button>
                 </div>
@@ -200,44 +211,44 @@
                     <div>
                         <label class="text-sm text-gray-300 font-semibold">Nombre Completo <span class="text-red-400">*</span></label>
                         <input x-model="createForm.name"
-                               class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                               placeholder="Ej: Juan Pérez García">
+                            class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="Ej: Juan Pérez García">
                     </div>
 
                     <div>
                         <label class="text-sm text-gray-300 font-semibold">Usuario <span class="text-red-400">*</span></label>
                         <input x-model="createForm.username"
-                               class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                               placeholder="Ej: jperez">
+                            class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="Ej: jperez">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="text-sm text-gray-300 font-semibold">Contraseña <span class="text-red-400">*</span></label>
                             <input type="password" x-model="createForm.password"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                   placeholder="Ingrese contraseña">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="Ingrese contraseña">
                         </div>
 
                         <div>
                             <label class="text-sm text-gray-300 font-semibold">Confirmar Contraseña <span class="text-red-400">*</span></label>
                             <input type="password" x-model="createForm.password_confirmation"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                   placeholder="Confirme contraseña">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="Confirme contraseña">
                         </div>
                     </div>
 
                     <div>
                         <label class="text-sm text-gray-300 font-semibold">Email</label>
                         <input x-model="createForm.email"
-                               class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                               placeholder="correo@dominio.com">
+                            class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            placeholder="correo@dominio.com">
                     </div>
 
                     <div>
                         <label class="text-sm text-gray-300 font-semibold">Rol <span class="text-red-400">*</span></label>
                         <select x-model="createForm.role_id"
-                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                             <option value="">Seleccione un rol</option>
                             <template x-for="rr in roles" :key="rr.id">
                                 <option :value="rr.id" x-text="rr.name"></option>
@@ -250,14 +261,14 @@
 
                 <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-3">
                     <button type="button"
-                            class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
-                            @click="closeAll()">
+                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
+                        @click="closeAll()">
                         Cancelar
                     </button>
 
                     <button type="button"
-                            class="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-extrabold inline-flex items-center gap-2"
-                            @click="submitCreate()">
+                        class="px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white font-extrabold inline-flex items-center gap-2"
+                        @click="submitCreate()">
                         <span>＋</span>
                         <span>Crear Usuario</span>
                     </button>
@@ -275,9 +286,7 @@
                 {{-- header --}}
                 <div class="p-6 bg-gradient-to-r from-purple-700 to-fuchsia-600 flex items-start justify-between gap-4">
                     <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                            🛡️
-                        </div>
+                        <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-white">🛡️</div>
                         <div>
                             <div class="text-white text-2xl font-extrabold" x-text="roleMode === 'create' ? 'Nuevo Rol' : 'Editar Rol'"></div>
                             <div class="text-white/80 text-sm mt-1">Configure los permisos del rol</div>
@@ -285,8 +294,8 @@
                     </div>
 
                     <button type="button"
-                            class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 text-white/90 hover:text-white hover:bg-white/15 flex items-center justify-center"
-                            @click="closeAll()">
+                        class="w-10 h-10 rounded-2xl bg-white/10 border border-white/20 text-white/90 hover:text-white hover:bg-white/15 flex items-center justify-center"
+                        @click="closeAll()">
                         ✕
                     </button>
                 </div>
@@ -297,14 +306,14 @@
                         <div>
                             <label class="text-sm text-gray-300 font-semibold">Nombre del Rol <span class="text-red-400">*</span></label>
                             <input x-model="roleForm.name"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                   placeholder="Ej: Supervisor, Operador, Gerente">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                placeholder="Ej: Supervisor, Operador, Gerente">
                         </div>
 
                         <div>
                             <label class="text-sm text-gray-300 font-semibold">Color del Rol</label>
                             <select x-model="roleForm.color"
-                                    class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                                 <template x-for="c in roleColors" :key="c.value">
                                     <option :value="c.value" x-text="c.label"></option>
                                 </template>
@@ -320,27 +329,21 @@
                         <label class="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 cursor-pointer">
                             <div class="flex items-center gap-3">
                                 <input type="checkbox"
-                                       class="w-5 h-5 rounded bg-slate-950 border-slate-700 text-purple-600 focus:ring-purple-500"
-                                       x-model="roleMatrix.create_contenedores">
+                                    class="w-5 h-5 rounded bg-slate-950 border-slate-700 text-purple-600 focus:ring-purple-500"
+                                    x-model="roleMatrix.create_contenedores">
                                 <div>
                                     <div class="text-white font-extrabold">Crear Contenedores</div>
                                 </div>
                             </div>
 
-                            <div class="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-blue-300 font-extrabold">
-                                +
-                            </div>
+                            <div class="w-9 h-9 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-blue-300 font-extrabold">+</div>
                         </label>
 
                         {{-- Accordion: pestañas de contenedores --}}
                         <div class="rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden">
-                            <button type="button"
-                                    class="w-full p-5 flex items-center justify-between gap-4"
-                                    @click="roleAccordion = !roleAccordion">
+                            <button type="button" class="w-full p-5 flex items-center justify-between gap-4" @click="roleAccordion = !roleAccordion">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-purple-300">
-                                        ⬣
-                                    </div>
+                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-purple-300">⬣</div>
                                     <div class="text-left">
                                         <div class="text-white font-extrabold">Pestañas de Contenedores</div>
                                         <div class="text-gray-400 text-xs mt-1">Permisos de lectura/escritura por pestaña</div>
@@ -373,9 +376,9 @@
 
                                             <template x-for="opt in ['none','ver','editar','total']" :key="opt">
                                                 <button type="button"
-                                                        class="h-10 rounded-xl border text-sm font-semibold"
-                                                        :class="matrixBtnClass(row.key, opt)"
-                                                        @click="setMatrix(row.key, opt)">
+                                                    class="h-10 rounded-xl border text-sm font-semibold"
+                                                    :class="matrixBtnClass(row.key, opt)"
+                                                    @click="setMatrix(row.key, opt)">
                                                     <span x-text="opt === 'none' ? '⦸' : (opt === 'ver' ? '👁' : (opt === 'editar' ? '✏' : '✔'))"></span>
                                                 </button>
                                             </template>
@@ -393,11 +396,10 @@
                         <template x-for="m in systemModules" :key="m.key">
                             <label class="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 cursor-pointer">
                                 <input type="checkbox"
-                                       class="w-5 h-5 rounded bg-slate-950 border-slate-700 text-purple-600 focus:ring-purple-500"
-                                       x-model="roleMatrix.system[m.key]">
+                                    class="w-5 h-5 rounded bg-slate-950 border-slate-700 text-purple-600 focus:ring-purple-500"
+                                    x-model="roleMatrix.system[m.key]">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center"
-                                         :class="m.iconClass">
+                                    <div class="w-10 h-10 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center" :class="m.iconClass">
                                         <span x-text="m.icon"></span>
                                     </div>
                                     <div>
@@ -412,14 +414,14 @@
                 {{-- footer --}}
                 <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-3">
                     <button type="button"
-                            class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
-                            @click="closeAll()">
+                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
+                        @click="closeAll()">
                         Cancelar
                     </button>
 
                     <button type="button"
-                            class="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold inline-flex items-center gap-2"
-                            @click="submitRole()">
+                        class="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-extrabold inline-flex items-center gap-2"
+                        @click="submitRole()">
                         <span>🛡️</span>
                         <span x-text="roleMode === 'create' ? 'Crear Rol' : 'Guardar'"></span>
                     </button>
@@ -428,7 +430,53 @@
         </div>
 
         {{-- =========================
-             MODAL: VER / EDITAR / ELIMINAR USUARIO (igual que tu base)
+             MODAL: ELIMINAR ROL (NUEVO)
+        ========================== --}}
+        <div x-show="modalRoleDelete" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
+
+            <div class="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-950 overflow-hidden" @click.stop>
+                <div class="p-6 border-b border-slate-800 bg-slate-950 flex items-start justify-between gap-4">
+                    <div>
+                        <div class="text-white text-2xl font-extrabold">Eliminar Rol</div>
+                        <div class="text-gray-400 text-sm mt-1">Esta acción no se puede deshacer</div>
+                    </div>
+
+                    <button type="button"
+                        class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
+                        @click="closeAll()">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <div class="rounded-2xl border border-red-800 bg-red-600/10 p-4 text-red-200">
+                        ¿Seguro que quieres eliminar el rol
+                        <span class="font-extrabold text-white" x-text="selectedRole?.name ?? ''"></span>?
+                    </div>
+                    <div class="mt-3 text-xs text-gray-500" x-show="!!selectedRole?.protegido">
+                        Este rol está marcado como protegido; si tu backend lo bloquea, verás un error.
+                    </div>
+                </div>
+
+                <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-3">
+                    <button type="button"
+                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
+                        @click="closeAll()">
+                        Cancelar
+                    </button>
+
+                    <button type="button"
+                        class="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold"
+                        @click="confirmRoleDelete()">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- =========================
+             MODAL: VER / EDITAR / ELIMINAR USUARIO
         ========================== --}}
         <div x-show="modalView" style="display:none;" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @click="closeAll()"></div>
@@ -441,8 +489,8 @@
                     </div>
 
                     <button type="button"
-                            class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
-                            @click="closeAll()">
+                        class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
+                        @click="closeAll()">
                         ✕
                     </button>
                 </div>
@@ -473,17 +521,16 @@
 
                         <div class="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 text-gray-200">
                             <div class="text-sm text-gray-400">Estado</div>
-                            <div class="font-semibold"
-                                 :class="selectedUser?.is_active ? 'text-green-400' : 'text-red-400'"
-                                 x-text="selectedUser?.is_active ? 'Activo' : 'Inactivo'"></div>
+                            <div class="font-semibold" :class="selectedUser?.is_active ? 'text-green-400' : 'text-red-400'"
+                                x-text="selectedUser?.is_active ? 'Activo' : 'Inactivo'"></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end">
                     <button type="button"
-                            class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
-                            @click="closeAll()">
+                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
+                        @click="closeAll()">
                         Cerrar
                     </button>
                 </div>
@@ -501,8 +548,8 @@
                     </div>
 
                     <button type="button"
-                            class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
-                            @click="closeAll()">
+                        class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
+                        @click="closeAll()">
                         ✕
                     </button>
                 </div>
@@ -511,20 +558,20 @@
                     <div>
                         <label class="text-sm text-gray-300">Nombre</label>
                         <input x-model="editForm.name"
-                               class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                            class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="text-sm text-gray-300">Usuario</label>
                             <input x-model="editForm.username"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                         </div>
 
                         <div>
                             <label class="text-sm text-gray-300">Email</label>
                             <input x-model="editForm.email"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                         </div>
                     </div>
 
@@ -532,7 +579,7 @@
                         <div>
                             <label class="text-sm text-gray-300">Rol</label>
                             <select x-model="editForm.role_id"
-                                    class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                                 <option value="">Seleccione un rol</option>
                                 <template x-for="rr in roles" :key="rr.id">
                                     <option :value="rr.id" x-text="rr.name"></option>
@@ -543,7 +590,7 @@
                         <div>
                             <label class="text-sm text-gray-300">Estado</label>
                             <select x-model="editForm.is_active"
-                                    class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                                 <option value="1">Activo</option>
                                 <option value="0">Inactivo</option>
                             </select>
@@ -554,27 +601,27 @@
                         <div>
                             <label class="text-sm text-gray-300">Nueva contraseña (opcional)</label>
                             <input type="password" x-model="editForm.password"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                         </div>
 
                         <div>
                             <label class="text-sm text-gray-300">Confirmar contraseña</label>
                             <input type="password" x-model="editForm.password_confirmation"
-                                   class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+                                class="mt-2 w-full px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
                         </div>
                     </div>
                 </div>
 
                 <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-3">
                     <button type="button"
-                            class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
-                            @click="closeAll()">
+                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
+                        @click="closeAll()">
                         Cancelar
                     </button>
 
                     <button type="button"
-                            class="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold"
-                            @click="submitEdit()">
+                        class="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold"
+                        @click="submitEdit()">
                         Guardar Cambios
                     </button>
                 </div>
@@ -592,8 +639,8 @@
                     </div>
 
                     <button type="button"
-                            class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
-                            @click="closeAll()">
+                        class="w-10 h-10 rounded-2xl bg-slate-900 border border-slate-800 text-gray-300 hover:text-white hover:bg-slate-800 flex items-center justify-center"
+                        @click="closeAll()">
                         ✕
                     </button>
                 </div>
@@ -607,14 +654,14 @@
 
                 <div class="p-6 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-3">
                     <button type="button"
-                            class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
-                            @click="closeAll()">
+                        class="px-5 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold border border-slate-800"
+                        @click="closeAll()">
                         Cancelar
                     </button>
 
                     <button type="button"
-                            class="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold"
-                            @click="confirmDelete()">
+                        class="px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold"
+                        @click="confirmDelete()">
                         Eliminar
                     </button>
                 </div>
@@ -622,10 +669,10 @@
         </div>
 
         {{-- =========================
-             Alpine logic
+             Alpine logic (ACTUALIZADO)
         ========================== --}}
         <script>
-            function usuariosPage(tabFromServer, usersFromServer, rolesFromServer, rolesFullFromServer, permisosByModuloFromServer) {
+            function usuariosPage(tabFromServer, usersFromServer, rolesFromServer, rolesFullFromServer, permisosByModuloFromServer, routesFromServer, csrfFromServer) {
                 return {
                     // tabs
                     activeTab: tabFromServer ?? 'usuarios',
@@ -635,6 +682,8 @@
                     roles: rolesFromServer ?? [],
                     rolesFull: rolesFullFromServer ?? [],
                     permisosByModulo: permisosByModuloFromServer ?? {},
+                    routes: routesFromServer ?? {},
+                    csrf: csrfFromServer ?? '',
 
                     // users modals
                     modalCreate: false,
@@ -674,9 +723,9 @@
 
                     // módulos del sistema (checks)
                     systemModules: [
-                        { key: 'reportes',  label: 'Administrar Reportes',  icon: '🧾', iconClass: 'text-orange-300' },
-                        { key: 'usuarios',  label: 'Administrar Usuarios',  icon: '👥', iconClass: 'text-purple-300' },
-                        { key: 'actividad', label: 'Administrar Actividad', icon: '∿',  iconClass: 'text-cyan-300' },
+                        { key: 'reportes', label: 'Administrar Reportes', icon: '🧾', iconClass: 'text-orange-300' },
+                        { key: 'usuarios', label: 'Administrar Usuarios', icon: '👥', iconClass: 'text-purple-300' },
+                        { key: 'actividad', label: 'Administrar Actividad', icon: '∿', iconClass: 'text-cyan-300' },
                     ],
 
                     // forms
@@ -728,6 +777,61 @@
                         // nada por ahora
                     },
 
+                    // ====== helper: errores laravel (mejor UX) ======
+                    formatLaravelErrors(errors) {
+                        if (!errors || typeof errors !== 'object') return null;
+                        const lines = [];
+                        Object.keys(errors).forEach((k) => {
+                            const arr = errors[k];
+                            if (Array.isArray(arr)) arr.forEach(m => lines.push(m));
+                        });
+                        return lines.length ? lines.join("\n") : null;
+                    },
+
+                    // ====== helper: permisos -> matrix (para editar sin sobrescribir) ======
+                    permisosToMatrix(perms) {
+                        const base = {
+                            create_contenedores: false,
+                            tabs: {
+                                registro: 'none',
+                                liberacion: 'none',
+                                docs: 'none',
+                                cotizacion: 'none',
+                                despacho: 'none',
+                                gastos: 'none',
+                            },
+                            system: { reportes: false, usuarios: false, actividad: false },
+                        };
+
+                        if (!Array.isArray(perms) || perms.length === 0) return base;
+
+                        const norm = (s) => (s ?? '').toString().toLowerCase().trim();
+
+                        // crear contenedores
+                        base.create_contenedores = perms.some(p => norm(p?.modulo) === 'contenedores' && norm(p?.tipo) === 'crear');
+
+                        // tabs: decide el nivel con base en tipos presentes
+                        const tabs = ['registro','liberacion','docs','cotizacion','despacho','gastos'];
+                        tabs.forEach((t) => {
+                            const tipos = perms
+                                .filter(p => norm(p?.modulo) === norm(t))
+                                .map(p => norm(p?.tipo));
+
+                            // orden: total > editar > ver > none
+                            if (tipos.includes('total') || tipos.includes('eliminar') || tipos.includes('crear')) base.tabs[t] = 'total';
+                            else if (tipos.includes('editar')) base.tabs[t] = 'editar';
+                            else if (tipos.includes('ver')) base.tabs[t] = 'ver';
+                            else base.tabs[t] = 'none';
+                        });
+
+                        // system: true si hay cualquier permiso del módulo
+                        ['reportes','usuarios','actividad'].forEach((k) => {
+                            base.system[k] = perms.some(p => norm(p?.modulo) === norm(k));
+                        });
+
+                        return base;
+                    },
+
                     // ====== colors (usuarios cards) ======
                     roleBg(u) {
                         const c = (u?.role_color ?? '').toLowerCase();
@@ -765,8 +869,6 @@
                     },
 
                     roleChips(role) {
-                        // Genera chips tipo "Registro: Total" "Docs: Ver" etc.
-                        // Si no hay permisos aún, devuelve vacío para no romper.
                         const list = role?.permisos ?? [];
                         if (!Array.isArray(list) || list.length === 0) return [];
 
@@ -779,7 +881,6 @@
                             return (t ?? 'Permiso');
                         };
 
-                        // Agrupa por modulo y muestra “modulo: tipos...”
                         const grouped = {};
                         list.forEach(p => {
                             const mod = (p.modulo ?? 'General');
@@ -790,11 +891,7 @@
                         return Object.keys(grouped).map(mod => {
                             const types = Array.from(grouped[mod]).join(', ');
                             const label = `${this.prettyModulo(mod)}: ${types}`;
-                            return {
-                                key: mod,
-                                label,
-                                class: 'bg-emerald-600/10 text-emerald-200 border border-emerald-600/20'
-                            };
+                            return { key: mod, label, class: 'bg-emerald-600/10 text-emerald-200 border border-emerald-600/20' };
                         });
                     },
 
@@ -819,11 +916,7 @@
                     matrixBtnClass(tabKey, option) {
                         const current = this.roleMatrix.tabs[tabKey] ?? 'none';
                         const active = current === option;
-
-                        // estilo como tus capturas: activo gris claro, inactivo oscuro
-                        if (active) {
-                            return 'bg-slate-300/40 border-slate-200/30 text-white';
-                        }
+                        if (active) return 'bg-slate-300/40 border-slate-200/30 text-white';
                         return 'bg-slate-900/40 border-slate-700/60 text-gray-300 hover:text-white hover:bg-slate-900/70';
                     },
 
@@ -856,7 +949,10 @@
                         };
                         this.modalCreate = true;
                     },
-                    openView(user) { this.selectedUser = user; this.modalView = true; },
+                    openView(user) {
+                        this.selectedUser = user;
+                        this.modalView = true;
+                    },
                     openEdit(user) {
                         this.selectedUser = user;
                         this.editForm = {
@@ -870,7 +966,10 @@
                         };
                         this.modalEdit = true;
                     },
-                    openDelete(user) { this.selectedUser = user; this.modalDelete = true; },
+                    openDelete(user) {
+                        this.selectedUser = user;
+                        this.modalDelete = true;
+                    },
 
                     // roles modals
                     openRoleCreate() {
@@ -878,20 +977,13 @@
                         this.selectedRole = null;
                         this.roleForm = { id: null, name: '', color: 'Púrpura' };
 
-                        // reset matrix
                         this.roleMatrix = {
                             create_contenedores: false,
-                            tabs: {
-                                registro: 'none',
-                                liberacion: 'none',
-                                docs: 'none',
-                                cotizacion: 'none',
-                                despacho: 'none',
-                                gastos: 'none',
-                            },
+                            tabs: { registro: 'none', liberacion: 'none', docs: 'none', cotizacion: 'none', despacho: 'none', gastos: 'none' },
                             system: { reportes: false, usuarios: false, actividad: false },
                         };
 
+                        this.roleAccordion = false;
                         this.modalRoleCreate = true;
                     },
                     openRoleEdit(role) {
@@ -903,7 +995,10 @@
                             color: role.color ?? 'Púrpura',
                         };
 
-                        // (solo UI) si luego quieres pre-cargar matriz desde permisos reales lo hacemos en la fase funcional
+                        // ✅ Pre-carga la matriz desde permisos reales (si rolesFull trae "permisos")
+                        this.roleMatrix = this.permisosToMatrix(role?.permisos ?? []);
+                        this.roleAccordion = true;
+
                         this.modalRoleCreate = true;
                     },
                     openRoleDelete(role) {
@@ -913,11 +1008,109 @@
 
                     // submits (placeholder)
                     submitCreate() { alert('Siguiente paso: conectar submitCreate() al backend (usuarios).'); },
-                    submitEdit()   { alert('Siguiente paso: conectar submitEdit() al backend (usuarios).'); },
-                    confirmDelete(){ alert('Siguiente paso: conectar confirmDelete() al backend (usuarios).'); },
+                    submitEdit() { alert('Siguiente paso: conectar submitEdit() al backend (usuarios).'); },
+                    confirmDelete() { alert('Siguiente paso: conectar confirmDelete() al backend (usuarios).'); },
 
-                    submitRole() {
-                        alert('Siguiente paso: conectar submitRole() al backend (roles + permisos).');
+                    async submitRole() {
+                        try {
+                            const name = (this.roleForm.name ?? '').trim();
+                            if (!name) { alert('Escribe el nombre del rol.'); return; }
+
+                            const payload = {
+                                name: name,
+                                color: this.roleForm.color ?? 'Púrpura',
+                                matrix: this.roleMatrix,
+                            };
+
+                            const isEdit = this.roleMode === 'edit' && this.roleForm.id;
+                            const url = isEdit ? `${this.routes.rolesUpdate}/${this.roleForm.id}` : this.routes.rolesStore;
+                            const method = isEdit ? 'PUT' : 'POST';
+
+                            const res = await fetch(url, {
+                                method,
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrf,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: JSON.stringify(payload),
+                            });
+
+                            let data = {};
+                            try { data = await res.json(); } catch (e) { data = {}; }
+
+                            if (!res.ok || data.ok === false) {
+                                if (res.status === 422) {
+                                    alert(this.formatLaravelErrors(data.errors) ?? data.message ?? 'Validación fallida.');
+                                    return;
+                                }
+                                alert(data.message ?? `No se pudo guardar el rol. (HTTP ${res.status})`);
+                                return;
+                            }
+
+                            const saved = data.role;
+
+                            // actualizar rolesFull
+                            const idx = this.rolesFull.findIndex(r => r.id === saved.id);
+                            if (idx >= 0) this.rolesFull.splice(idx, 1, saved);
+                            else this.rolesFull.unshift(saved);
+
+                            // actualizar roles simples (selects)
+                            const idx2 = this.roles.findIndex(r => r.id === saved.id);
+                            const simple = { id: saved.id, name: saved.name, color: saved.color };
+                            if (idx2 >= 0) this.roles.splice(idx2, 1, simple);
+                            else this.roles.push(simple);
+
+                            this.closeAll();
+                        } catch (e) {
+                            console.error(e);
+                            alert('Error inesperado guardando rol.');
+                        }
+                    },
+
+                    async confirmRoleDelete() {
+                        try {
+                            if (!this.selectedRole?.id) { alert('No hay rol seleccionado.'); return; }
+
+                            const url = `${this.routes.rolesDestroy}/${this.selectedRole.id}`;
+
+                            const res = await fetch(url, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrf,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            });
+
+                            let data = {};
+                            try { data = await res.json(); } catch (e) { data = {}; }
+
+                            if (!res.ok || data.ok === false) {
+                                if (res.status === 422) {
+                                    alert(this.formatLaravelErrors(data.errors) ?? data.message ?? 'No se pudo eliminar.');
+                                    return;
+                                }
+                                alert(data.message ?? `No se pudo eliminar el rol. (HTTP ${res.status})`);
+                                return;
+                            }
+
+                            const id = this.selectedRole.id;
+
+                            // quitar de rolesFull
+                            const i1 = this.rolesFull.findIndex(r => r.id === id);
+                            if (i1 >= 0) this.rolesFull.splice(i1, 1);
+
+                            // quitar de roles simples
+                            const i2 = this.roles.findIndex(r => r.id === id);
+                            if (i2 >= 0) this.roles.splice(i2, 1);
+
+                            this.closeAll();
+                        } catch (e) {
+                            console.error(e);
+                            alert('Error inesperado eliminando rol.');
+                        }
                     },
                 }
             }
