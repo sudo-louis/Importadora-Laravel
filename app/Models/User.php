@@ -36,25 +36,26 @@ class User extends Authenticatable
     }
 
     /**
-     * ✅ Permiso exacto: modulo + tipo
-     * Ej: reportes + ver
-     * Si tipo es null -> cualquier permiso dentro del módulo.
+     * Permiso exacto: modulo + tipo (ej: reportes + ver)
+     * Si $tipo es null, busca cualquier permiso dentro del módulo.
      */
     public function hasPermiso(string $modulo, ?string $tipo = null): bool
     {
         $modulo = mb_strtolower(trim($modulo));
-        $tipo   = $tipo !== null ? mb_strtolower(trim($tipo)) : null;
+        $tipo = $tipo !== null ? mb_strtolower(trim($tipo)) : null;
 
-        // Asegura roles cargados
+        // Asegura permisos cargados en roles (1 solo load)
         if (!$this->relationLoaded('roles')) {
             $this->load('roles.permisos');
+        } else {
+            $this->roles->each(function ($role) {
+                if (!$role->relationLoaded('permisos')) {
+                    $role->load('permisos');
+                }
+            });
         }
 
         foreach ($this->roles as $role) {
-            if (!$role->relationLoaded('permisos')) {
-                $role->load('permisos');
-            }
-
             foreach ($role->permisos as $p) {
                 $pModulo = mb_strtolower((string) $p->modulo);
                 $pTipo   = mb_strtolower((string) $p->tipo);
@@ -68,9 +69,6 @@ class User extends Authenticatable
         return false;
     }
 
-    /**
-     * ✅ Acceso a módulo: si tiene al menos un permiso dentro del módulo
-     */
     public function canAccessModule(string $modulo): bool
     {
         return $this->hasPermiso($modulo, null);

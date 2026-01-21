@@ -11,22 +11,22 @@
                 @php
                     $u = Auth::user();
 
-                    // Módulos simples
                     $canReportes  = $u?->canAccessModule('reportes') ?? false;
                     $canActividad = $u?->canAccessModule('actividad') ?? false;
                     $canUsuarios  = $u?->canAccessModule('usuarios') ?? false;
 
-                    // Contenedores:
-                    // - crear contenedores (modulo contenedores / tipo crear)
-                    // - o cualquiera de las tabs (registro/liberacion/docs/cotizacion/despacho/gastos)
+                    // Contenedores = permiso por pestaña o contenedores/crear
                     $canContenedores =
                         ($u?->hasPermiso('contenedores', 'crear') ?? false) ||
-                        ($u?->canAccessModule('registro') ?? false) ||
-                        ($u?->canAccessModule('liberacion') ?? false) ||
-                        ($u?->canAccessModule('docs') ?? false) ||
-                        ($u?->canAccessModule('cotizacion') ?? false) ||
-                        ($u?->canAccessModule('despacho') ?? false) ||
-                        ($u?->canAccessModule('gastos') ?? false);
+                        ($u?->hasPermiso('registro') ?? false) ||
+                        ($u?->hasPermiso('liberacion') ?? false) ||
+                        ($u?->hasPermiso('docs') ?? false) ||
+                        ($u?->hasPermiso('cotizacion') ?? false) ||
+                        ($u?->hasPermiso('despacho') ?? false) ||
+                        ($u?->hasPermiso('gastos') ?? false);
+
+                    // Plantillas pertenece a Reportes
+                    $canPlantillas = $canReportes && \Illuminate\Support\Facades\Route::has('plantillas.index');
                 @endphp
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
@@ -43,6 +43,12 @@
                     @if($canReportes)
                         <x-nav-link :href="route('reportes.index')" :active="request()->routeIs('reportes.*')">
                             {{ __('Reportes') }}
+                        </x-nav-link>
+                    @endif
+
+                    @if($canPlantillas)
+                        <x-nav-link :href="route('plantillas.index')" :active="request()->routeIs('plantillas.*')">
+                            {{ __('Plantillas') }}
                         </x-nav-link>
                     @endif
 
@@ -118,6 +124,12 @@
             @if($canReportes)
                 <x-responsive-nav-link :href="route('reportes.index')" :active="request()->routeIs('reportes.*')">
                     {{ __('Reportes') }}
+                </x-responsive-nav-link>
+            @endif
+
+            @if($canPlantillas)
+                <x-responsive-nav-link :href="route('plantillas.index')" :active="request()->routeIs('plantillas.*')">
+                    {{ __('Plantillas') }}
                 </x-responsive-nav-link>
             @endif
 

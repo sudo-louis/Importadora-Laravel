@@ -11,118 +11,85 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 
 Route::middleware(['auth'])->group(function () {
 
-    // Dashboard: lo dejamos libre solo con auth
+    // Dashboard: accesible para cualquier usuario autenticado
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // =========================
-    // CONTENEDORES
-    // =========================
+    /**
+     * ==========================
+     * CONTENEDORES (módulo contenedores)
+     * ==========================
+     */
+    Route::middleware(['module:contenedores'])->group(function () {
 
-    // Vista principal contenedores (registro)
-    Route::view('/contenedores', 'contenedores.index')
-        ->middleware('module:registro')
-        ->name('contenedores.index');
+        Route::view('/contenedores', 'contenedores.index')->name('contenedores.index');
 
-    Route::resource('contenedores', ContenedorController::class)
-        ->middleware('module:registro')
-        ->except(['create', 'edit'])
-        ->parameters(['contenedores' => 'contenedor']);
+        Route::resource('contenedores', ContenedorController::class)
+            ->except(['create', 'edit'])
+            ->parameters(['contenedores' => 'contenedor']);
 
-    Route::put('contenedores/{contenedor}/liberacion', [ContenedorController::class, 'updateLiberacion'])
-        ->middleware('module:liberacion')
-        ->name('contenedores.liberacion.update');
+        Route::put('contenedores/{contenedor}/liberacion', [ContenedorController::class, 'updateLiberacion'])
+            ->name('contenedores.liberacion.update');
 
-    Route::put('contenedores/{contenedor}/envio-documentos', [ContenedorController::class, 'updateEnvioDocumentos'])
-        ->middleware('module:docs')
-        ->name('contenedores.docs.update');
+        Route::put('contenedores/{contenedor}/envio-documentos', [ContenedorController::class, 'updateEnvioDocumentos'])
+            ->name('contenedores.docs.update');
 
-    Route::put('contenedores/{contenedor}/despacho', [ContenedorController::class, 'updateDespacho'])
-        ->middleware('module:despacho')
-        ->name('contenedores.despacho.update');
+        Route::put('contenedores/{contenedor}/despacho', [ContenedorController::class, 'updateDespacho'])
+            ->name('contenedores.despacho.update');
 
-    Route::put('contenedores/{contenedor}/cotizacion', [ContenedorController::class, 'updateCotizacion'])
-        ->middleware('module:cotizacion')
-        ->name('contenedores.cotizacion.update');
+        Route::put('contenedores/{contenedor}/cotizacion', [ContenedorController::class, 'updateCotizacion'])
+            ->name('contenedores.cotizacion.update');
 
-    Route::put('contenedores/{contenedor}/gastos', [ContenedorController::class, 'updateGastos'])
-        ->middleware('module:gastos')
-        ->name('contenedores.gastos.update');
+        Route::put('contenedores/{contenedor}/gastos', [ContenedorController::class, 'updateGastos'])
+            ->name('contenedores.gastos.update');
+    });
 
-    // =========================
-    // PLANTILLAS (de momento solo auth)
-    // Si luego quieres controlarlas por permisos:
-    // crea permisos modulo=plantillas tipo=ver/crear/editar/eliminar
-    // y agrega ->middleware('module:plantillas')
-    // =========================
-    Route::get('/plantillas', [PlantillaController::class, 'index'])->name('plantillas.index');
-    Route::post('/plantillas', [PlantillaController::class, 'store'])->name('plantillas.store');
-    Route::put('/plantillas/{plantilla}', [PlantillaController::class, 'update'])->name('plantillas.update');
-    Route::delete('/plantillas/{plantilla}', [PlantillaController::class, 'destroy'])->name('plantillas.destroy');
+    /**
+     * ==========================
+     * REPORTES (módulo reportes)
+     * ==========================
+     */
+    Route::middleware(['module:reportes'])->group(function () {
 
-    // =========================
-    // REPORTES
-    // =========================
-    Route::get('/reportes', [ReportesController::class, 'index'])
-        ->middleware('module:reportes')
-        ->name('reportes.index');
+        Route::get('/reportes', [ReportesController::class, 'index'])->name('reportes.index');
+        Route::get('/reportes/export', [ReportesController::class, 'export'])->name('reportes.export');
+        Route::get('/reportes/autocomplete/clientes', [ReportesController::class, 'autocompleteClientes'])->name('reportes.autocomplete.clientes');
+        Route::get('/reportes/autocomplete/contenedores', [ReportesController::class, 'autocompleteContenedores'])->name('reportes.autocomplete.contenedores');
 
-    Route::get('/reportes/export', [ReportesController::class, 'export'])
-        ->middleware('module:reportes')
-        ->name('reportes.export');
+        // Plantillas pertenece a Reportes
+        Route::get('/plantillas', [PlantillaController::class, 'index'])->name('plantillas.index');
+        Route::post('/plantillas', [PlantillaController::class, 'store'])->name('plantillas.store');
+        Route::put('/plantillas/{plantilla}', [PlantillaController::class, 'update'])->name('plantillas.update');
+        Route::delete('/plantillas/{plantilla}', [PlantillaController::class, 'destroy'])->name('plantillas.destroy');
+    });
 
-    Route::get('/reportes/autocomplete/clientes', [ReportesController::class, 'autocompleteClientes'])
-        ->middleware('module:reportes')
-        ->name('reportes.autocomplete.clientes');
+    /**
+     * ==========================
+     * ACTIVIDAD (módulo actividad)
+     * ==========================
+     */
+    Route::middleware(['module:actividad'])->group(function () {
+        Route::view('/actividad/contenedores', 'actividad.contenedores')->name('actividad.contenedores');
+        Route::view('/actividad/usuarios', 'actividad.usuarios')->name('actividad.usuarios');
+    });
 
-    Route::get('/reportes/autocomplete/contenedores', [ReportesController::class, 'autocompleteContenedores'])
-        ->middleware('module:reportes')
-        ->name('reportes.autocomplete.contenedores');
+    /**
+     * ==========================
+     * USUARIOS / ROLES (módulo usuarios)
+     * ==========================
+     */
+    Route::middleware(['module:usuarios'])->group(function () {
 
-    // =========================
-    // ACTIVIDAD
-    // =========================
-    Route::view('/actividad/contenedores', 'actividad.contenedores')
-        ->middleware('module:actividad')
-        ->name('actividad.contenedores');
+        Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
+        Route::get('/usuarios/data', [UsuariosController::class, 'data'])->name('usuarios.data');
 
-    Route::view('/actividad/usuarios', 'actividad.usuarios')
-        ->middleware('module:actividad')
-        ->name('actividad.usuarios');
+        Route::post('/usuarios', [UsuariosController::class, 'store'])->name('usuarios.store');
+        Route::put('/usuarios/{user}', [UsuariosController::class, 'update'])->name('usuarios.update');
+        Route::delete('/usuarios/{user}', [UsuariosController::class, 'destroy'])->name('usuarios.destroy');
 
-    // =========================
-    // USUARIOS + ROLES
-    // =========================
-    Route::get('/usuarios', [UsuariosController::class, 'index'])
-        ->middleware('module:usuarios')
-        ->name('usuarios.index');
-
-    Route::get('/usuarios/data', [UsuariosController::class, 'data'])
-        ->middleware('module:usuarios')
-        ->name('usuarios.data');
-
-    Route::post('/usuarios', [UsuariosController::class, 'store'])
-        ->middleware('module:usuarios')
-        ->name('usuarios.store');
-
-    Route::put('/usuarios/{user}', [UsuariosController::class, 'update'])
-        ->middleware('module:usuarios')
-        ->name('usuarios.update');
-
-    Route::delete('/usuarios/{user}', [UsuariosController::class, 'destroy'])
-        ->middleware('module:usuarios')
-        ->name('usuarios.destroy');
-
-    Route::post('/roles', [UsuariosController::class, 'rolesStore'])
-        ->middleware('module:usuarios')
-        ->name('roles.store');
-
-    Route::put('/roles/{role}', [UsuariosController::class, 'rolesUpdate'])
-        ->middleware('module:usuarios')
-        ->name('roles.update');
-
-    Route::delete('/roles/{role}', [UsuariosController::class, 'rolesDestroy'])
-        ->middleware('module:usuarios')
-        ->name('roles.destroy');
+        Route::post('/roles', [UsuariosController::class, 'rolesStore'])->name('roles.store');
+        Route::put('/roles/{role}', [UsuariosController::class, 'rolesUpdate'])->name('roles.update');
+        Route::delete('/roles/{role}', [UsuariosController::class, 'rolesDestroy'])->name('roles.destroy');
+    });
 });
 
 require __DIR__ . '/auth.php';

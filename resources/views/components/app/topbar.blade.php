@@ -6,7 +6,6 @@
     </div>
 
     <div class="flex items-center gap-3">
-        {{-- Toggle Dark/Light --}}
         <button type="button"
                 @click="toggleTheme()"
                 class="w-11 h-11 rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800/70 transition flex items-center justify-center"
@@ -20,7 +19,6 @@
             </svg>
         </button>
 
-        {{-- User chip --}}
         <div class="hidden sm:flex items-center gap-3 px-4 py-2 rounded-2xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700">
             <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
@@ -31,7 +29,6 @@
             </div>
         </div>
 
-        {{-- Logout --}}
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit"
