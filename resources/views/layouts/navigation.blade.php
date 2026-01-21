@@ -10,22 +10,23 @@
 
                 @php
                     $u = Auth::user();
-                    $canReportes = $u?->canAccessModule('reportes') ?? false;
-                    $canActividad = $u?->canAccessModule('actividad') ?? false;
-                    $canUsuarios = $u?->canAccessModule('usuarios') ?? false;
 
-                    // Contenedores = permiso por pestaña o contenedores/crear
+                    // Módulos simples
+                    $canReportes  = $u?->canAccessModule('reportes') ?? false;
+                    $canActividad = $u?->canAccessModule('actividad') ?? false;
+                    $canUsuarios  = $u?->canAccessModule('usuarios') ?? false;
+
+                    // Contenedores:
+                    // - crear contenedores (modulo contenedores / tipo crear)
+                    // - o cualquiera de las tabs (registro/liberacion/docs/cotizacion/despacho/gastos)
                     $canContenedores =
                         ($u?->hasPermiso('contenedores', 'crear') ?? false) ||
-                        ($u?->hasPermiso('registro') ?? false) ||
-                        ($u?->hasPermiso('liberacion') ?? false) ||
-                        ($u?->hasPermiso('docs') ?? false) ||
-                        ($u?->hasPermiso('cotizacion') ?? false) ||
-                        ($u?->hasPermiso('despacho') ?? false) ||
-                        ($u?->hasPermiso('gastos') ?? false);
-
-                    // Si aún no manejas plantillas por permisos, déjalo en false
-                    $canPlantillas = $u?->canAccessModule('plantillas') ?? false;
+                        ($u?->canAccessModule('registro') ?? false) ||
+                        ($u?->canAccessModule('liberacion') ?? false) ||
+                        ($u?->canAccessModule('docs') ?? false) ||
+                        ($u?->canAccessModule('cotizacion') ?? false) ||
+                        ($u?->canAccessModule('despacho') ?? false) ||
+                        ($u?->canAccessModule('gastos') ?? false);
                 @endphp
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
@@ -54,13 +55,6 @@
                     @if($canUsuarios)
                         <x-nav-link :href="route('usuarios.index')" :active="request()->routeIs('usuarios.*')">
                             {{ __('Usuarios') }}
-                        </x-nav-link>
-                    @endif
-
-                    {{-- Si todavía no tienes permisos plantillas, comenta esto --}}
-                    @if($canPlantillas)
-                        <x-nav-link :href="route('plantillas.index')" :active="request()->routeIs('plantillas.*')">
-                            {{ __('Plantillas') }}
                         </x-nav-link>
                     @endif
                 </div>

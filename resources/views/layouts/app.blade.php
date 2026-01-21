@@ -13,13 +13,13 @@
 <body class="h-full bg-white text-gray-900 dark:bg-slate-950 dark:text-white">
 <div class="min-h-screen flex">
 
-    {{-- Sidebar --}}
+    {{-- Sidebar (tu layout custom) --}}
     <x-app.sidebar />
 
     {{-- Main --}}
     <div class="flex-1 flex flex-col min-w-0">
 
-        {{-- Topbar --}}
+        {{-- Topbar (tu layout custom) --}}
         <x-app.topbar />
 
         {{-- Content --}}
