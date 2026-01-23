@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Contenedor;
 use App\Models\Cotizacion;
-use App\Models\Despacho; // ✅ NUEVO
+use App\Models\Despacho;
 use App\Models\EnvioDocumento;
 use App\Models\Gasto;
 use App\Models\Liberacion;
@@ -74,8 +74,8 @@ class ContenedorController extends Controller
             'gastosLiberacion',
             'envioDocumento',
             'cotizacion',
-            'despacho', // ✅ NUEVO
-            'gastos',   // ✅ NUEVO (para pestaña Gastos)
+            'despacho',
+            'gastos',
         ]);
 
         return view('contenedores.show', compact('contenedor', 'mode', 'tab'));
@@ -185,7 +185,6 @@ class ContenedorController extends Controller
         $maniobras  = (float) ($data['maniobras'] ?? 0);
         $almacenaje = (float) ($data['almacenaje'] ?? 0);
 
-        // OJO: 'total' es columna generada en MySQL -> NO se guarda desde Laravel
         $cot = $contenedor->cotizacion ?: new Cotizacion(['contenedor_id' => $contenedor->id]);
 
         $cot->fill([
@@ -204,9 +203,6 @@ class ContenedorController extends Controller
             ->with('success', 'Cotización actualizada');
     }
 
-    /**
-     * ✅ NUEVO: Guarda pestaña Despacho
-     */
     public function updateDespacho(Request $request, Contenedor $contenedor)
     {
         $data = $request->validate([
@@ -232,11 +228,6 @@ class ContenedorController extends Controller
             ->with('success', 'Despacho actualizado');
     }
 
-    /**
-     * ✅ NUEVO: Guarda pestaña Gastos (Generales)
-     * - Recibe array gastos[][id, descripcion, monto]
-     * - Actualiza existentes, crea nuevos, y elimina los que ya no vengan
-     */
     public function updateGastos(Request $request, Contenedor $contenedor)
     {
         $data = $request->validate([
@@ -248,12 +239,10 @@ class ContenedorController extends Controller
 
         DB::transaction(function () use ($contenedor, $data) {
 
-            // Traemos gastos actuales de tipo "general"
-            $actuales = $contenedor->gastos()->get(); // relación filtrada a 'general' en el modelo (recomendado)
+            $actuales = $contenedor->gastos()->get();
             $actualIds = $actuales->pluck('id')->all();
 
             $rows = $data['gastos'] ?? [];
-
             $keepIds = [];
 
             foreach ($rows as $g) {
@@ -261,10 +250,7 @@ class ContenedorController extends Controller
                 $desc = trim((string)($g['descripcion'] ?? ''));
                 $monto = $g['monto'] ?? null;
 
-                // si viene completamente vacío, lo ignoramos
-                if ($desc === '' && ($monto === null || $monto === '')) {
-                    continue;
-                }
+                if ($desc === '' && ($monto === null || $monto === '')) continue;
 
                 $payload = [
                     'contenedor_id' => $contenedor->id,
@@ -274,7 +260,6 @@ class ContenedorController extends Controller
                 ];
 
                 if ($id && in_array($id, $actualIds, true)) {
-                    // update
                     Gasto::where('id', $id)
                         ->where('contenedor_id', $contenedor->id)
                         ->where('tipo', 'general')
@@ -285,13 +270,11 @@ class ContenedorController extends Controller
 
                     $keepIds[] = $id;
                 } else {
-                    // create
                     $nuevo = Gasto::create($payload);
                     $keepIds[] = $nuevo->id;
                 }
             }
 
-            // eliminar los que existían y ya no vienen
             $toDelete = array_diff($actualIds, $keepIds);
 
             if (!empty($toDelete)) {
@@ -305,5 +288,29 @@ class ContenedorController extends Controller
         return redirect()
             ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'gastos'])
             ->with('success', 'Gastos actualizados');
+    }
+
+    /**
+     * ✅ NUEVO: Eliminar contenedor
+     * - borra registros relacionados primero (si tu DB no tiene cascade)
+     * - luego elimina el contenedor
+     */
+    public function destroy(Contenedor $contenedor)
+    {
+        DB::transaction(function () use ($contenedor) {
+            // Si tus FK tienen ON DELETE CASCADE, esto no estorba, pero es seguro.
+            $contenedor->gastosLiberacion()?->delete();
+            $contenedor->gastos()?->delete();
+            $contenedor->liberacion()?->delete();
+            $contenedor->envioDocumento()?->delete();
+            $contenedor->cotizacion()?->delete();
+            $contenedor->despacho()?->delete();
+
+            $contenedor->delete();
+        });
+
+        return redirect()
+            ->route('contenedores.index')
+            ->with('success', 'Contenedor eliminado correctamente');
     }
 }

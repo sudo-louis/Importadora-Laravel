@@ -376,35 +376,35 @@ class UsuariosController extends Controller
         });
     }
 
-    public function destroy(User $user)
-    {
-        // ✅ No permitir borrarte a ti mismo
-        if (auth()->check() && auth()->id() === $user->id) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'No puedes eliminar tu propio usuario.'
-            ], 403);
-        }
+    // public function destroy(User $user)
+    // {
+    //     // ✅ No permitir borrarte a ti mismo
+    //     if (auth()->check() && auth()->id() === $user->id) {
+    //         return response()->json([
+    //             'ok' => false,
+    //             'message' => 'No puedes eliminar tu propio usuario.'
+    //         ], 403);
+    //     }
 
-        // ✅ Bloquear eliminación si tiene rol admin
-        $isAdmin = $user->roles()
-            ->whereIn(DB::raw('LOWER(name)'), ['administrador','admin','superadmin'])
-            ->exists();
+    //     // ✅ Bloquear eliminación si tiene rol admin
+    //     $isAdmin = $user->roles()
+    //         ->whereIn(DB::raw('LOWER(name)'), ['administrador','admin','superadmin'])
+    //         ->exists();
 
-        if ($isAdmin) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'No puedes eliminar usuarios Administradores desde la aplicación.'
-            ], 403);
-        }
+    //     if ($isAdmin) {
+    //         return response()->json([
+    //             'ok' => false,
+    //             'message' => 'No puedes eliminar usuarios Administradores desde la aplicación.'
+    //         ], 403);
+    //     }
 
-        return DB::transaction(function () use ($user) {
-            $user->roles()->sync([]); // limpia pivote
-            $user->delete();
+    //     return DB::transaction(function () use ($user) {
+    //         $user->roles()->sync([]); // limpia pivote
+    //         $user->delete();
 
-            return response()->json(['ok' => true]);
-        });
-    }
+    //         return response()->json(['ok' => true]);
+    //     });
+    // }
 
     // =========================================================
     // =================== helpers permisos =====================

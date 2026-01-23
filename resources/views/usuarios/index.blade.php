@@ -110,8 +110,8 @@
                                     @click="openView(u)">👁</button>
                                 <button type="button" class="hover:text-white" title="Editar"
                                     @click="openEdit(u)">✏</button>
-                                <button type="button" class="hover:text-white" title="Eliminar"
-                                    @click="openDelete(u)">🗑</button>
+                                {{-- <button type="button" class="hover:text-white" title="Eliminar"
+                                    @click="openDelete(u)">🗑</button> --}}
                             </div>
                         </div>
                     </div>
