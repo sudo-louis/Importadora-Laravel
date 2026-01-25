@@ -290,11 +290,6 @@ class ContenedorController extends Controller
             ->with('success', 'Gastos actualizados');
     }
 
-    /**
-     * ✅ NUEVO: Eliminar contenedor
-     * - borra registros relacionados primero (si tu DB no tiene cascade)
-     * - luego elimina el contenedor
-     */
     public function destroy(Contenedor $contenedor)
     {
         DB::transaction(function () use ($contenedor) {
