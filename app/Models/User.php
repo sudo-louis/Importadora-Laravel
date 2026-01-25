@@ -54,7 +54,6 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
-    // ✅ para actividad: relación directa
     public function actividadLogs(): HasMany
     {
         return $this->hasMany(ActividadLog::class, 'user_id');
@@ -95,7 +94,6 @@ class User extends Authenticatable
         return $this->hasPermiso($modulo, null);
     }
 
-    // ✅ útil para actividad (rol primario)
     public function primaryRole()
     {
         return $this->roles()->orderBy('roles.id')->first();
