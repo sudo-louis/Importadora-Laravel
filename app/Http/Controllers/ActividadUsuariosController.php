@@ -9,45 +9,36 @@ use Illuminate\Support\Facades\Log;
 
 class ActividadUsuariosController extends Controller
 {
-    /**
-     * GET /actividad/usuarios/data  (alias de /list)
-     * Devuelve usuarios con conteo de actividades + rol (si tiene)
-     *
-     * Respuesta:
-     * { ok:true, items:[{id,name,email,username,is_active,role_name,actividades_count}] }
-     */
     public function list(Request $request)
     {
         try {
-            // OJO: tu tabla users NO tiene username (por eso tronaba antes).
-            // Aquí NO lo seleccionamos. Si el frontend lo pide, lo enviamos null.
             $users = User::query()
-                ->select(['id', 'name', 'email', 'is_active', 'created_at'])
-                // necesita relación actividadLogs en el modelo User (una sola vez)
+                ->select(['id', 'name', 'email', 'is_active'])
                 ->withCount(['actividadLogs as actividades_count'])
-                ->with(['roles:id,name']) // para sacar role_name
+                ->with(['roles:id,name'])
                 ->orderByDesc('actividades_count')
                 ->orderBy('name')
-                ->limit(60)
+                ->limit(200)
                 ->get();
 
-            $items = $users->map(function (User $u) {
-                $roleName = $u->roles->first()?->name; // primer rol (si existe)
+            $mapped = $users->map(function (User $u) {
+                $roleName = $u->roles->first()?->name;
 
                 return [
                     'id' => $u->id,
                     'name' => $u->name,
                     'email' => $u->email,
-                    'username' => null, // <- tu BD no lo tiene; evitamos error y mantenemos API estable
+                    'username' => $u->username ?? null, // si existe en tu tabla, lo manda; si no, null
                     'is_active' => (bool) $u->is_active,
                     'role_name' => $roleName,
-                    'actividades_count' => (int) ($u->actividades_count ?? 0),
+                    'actividades' => (int) ($u->actividades_count ?? 0),
                 ];
             })->values()->all();
 
             return response()->json([
                 'ok' => true,
-                'items' => $items,
+                'users' => $mapped,
+                'items' => $mapped,
             ]);
         } catch (\Throwable $e) {
             Log::error('ActividadUsuariosController@list ERROR', [
@@ -58,18 +49,35 @@ class ActividadUsuariosController extends Controller
 
             return response()->json([
                 'ok' => false,
+                'users' => [],
                 'items' => [],
                 'message' => 'Error cargando usuarios: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * GET /actividad/usuarios/{user}/logs?accion=&desde=&hasta=
-     *
-     * Respuesta:
-     * { ok:true, user:{...}, logs:[...] }
-     */
+    public function show(User $user)
+    {
+        $user->loadMissing('roles:id,name');
+
+        $roleName = $user->roles->first()?->name;
+
+        $actividades = ActividadLog::where('user_id', $user->id)->count();
+
+        $u = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'username' => $user->username ?? null,
+            'is_active' => (bool) $user->is_active,
+            'role_name' => $roleName,
+            'actividades' => (int) $actividades,
+        ];
+
+        // ✅ aquí está la corrección clave
+        return view('actividad.usuario_detalle', compact('u'));
+    }
+
     public function logs(Request $request, User $user)
     {
         try {
@@ -95,6 +103,8 @@ class ActividadUsuariosController extends Controller
             }
 
             $logs = $q->limit(500)->get()->map(function ($l) {
+                $fechaHora = $l->fecha_hora ? $l->fecha_hora->format('Y-m-d H:i:s') : null;
+
                 $cambios = $this->diffKeys(
                     (array) ($l->datos_anteriores ?? []),
                     (array) ($l->datos_nuevos ?? [])
@@ -105,26 +115,19 @@ class ActividadUsuariosController extends Controller
                     'accion' => $l->accion,
                     'modulo' => $l->modulo,
                     'descripcion' => $l->descripcion,
-                    'fecha_hora' => optional($l->fecha_hora)->format('Y-m-d H:i:s'),
-                    'contenedor' => $l->contenedor?->numero_contenedor,
+                    'fecha_hora' => $fechaHora,
+
+                    // ✅ campos que tu tabla usa:
+                    'fecha' => $l->fecha_hora?->format('Y-m-d'),
+                    'hora'  => $l->fecha_hora?->format('H:i:s'),
+
+                    'contenedor' => $l->contenedor?->numero_contenedor ?? '-',
                     'cambios' => $cambios,
                 ];
             })->values()->all();
 
-            // info del user para header (tu UI puede mostrar role, etc.)
-            $user->loadMissing('roles:id,name');
-            $roleName = $user->roles->first()?->name;
-
             return response()->json([
                 'ok' => true,
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'username' => null, // tu BD no lo tiene
-                    'is_active' => (bool) $user->is_active,
-                    'role_name' => $roleName,
-                ],
                 'logs' => $logs,
             ]);
         } catch (\Throwable $e) {

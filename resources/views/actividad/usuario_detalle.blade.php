@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="space-y-6" x-data="actividadUsuarioDetalle({{ json_encode($u) }})" x-init="init()">
+    <div class="space-y-6" x-data="actividadUsuarioDetalle(@js($u))" x-init="init()">
 
         <div>
             <h1 class="text-2xl font-bold text-white">Actividad por Usuario</h1>
@@ -13,7 +13,6 @@
             </a>
         </div>
 
-        {{-- Filtros --}}
         <div class="rounded-2xl border border-slate-800 bg-slate-900/60 shadow">
             <div class="p-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -26,8 +25,6 @@
                             <option value="crear">Crear</option>
                             <option value="editar">Editar</option>
                             <option value="ver">Ver</option>
-                            {{-- si tú no quieres eliminar aquí también, lo quitamos igual --}}
-                            {{-- <option value="eliminar">Eliminar</option> --}}
                         </select>
                     </div>
 
@@ -50,7 +47,6 @@
             </div>
         </div>
 
-        {{-- Header usuario --}}
         <div class="rounded-2xl border border-slate-800 bg-slate-900/60 shadow overflow-hidden">
             <div class="p-6 flex items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
@@ -71,12 +67,11 @@
                 </div>
 
                 <div class="text-right">
-                    <div class="text-2xl font-extrabold text-blue-300" x-text="user.actividades"></div>
+                    <div class="text-2xl font-extrabold text-blue-300" x-text="user.actividades ?? 0"></div>
                     <div class="text-sm text-slate-300">Actividades</div>
                 </div>
             </div>
 
-            {{-- Tabla --}}
             <div class="border-t border-slate-800">
                 <div class="p-0 overflow-x-auto">
                     <table class="min-w-full text-sm">
@@ -105,8 +100,8 @@
                             <template x-for="row in logs" :key="row.id">
                                 <tr class="border-t border-slate-800">
                                     <td class="px-4 py-4 text-slate-200">
-                                        <div class="font-semibold" x-text="row.fecha"></div>
-                                        <div class="text-xs text-slate-500" x-text="row.hora"></div>
+                                        <div class="font-semibold" x-text="row.fecha ?? ''"></div>
+                                        <div class="text-xs text-slate-500" x-text="row.hora ?? ''"></div>
                                     </td>
 
                                     <td class="px-4 py-4">
@@ -117,15 +112,15 @@
                                     </td>
 
                                     <td class="px-4 py-4">
-                                        <span class="text-blue-300 font-semibold" x-text="row.contenedor"></span>
+                                        <span class="text-blue-300 font-semibold" x-text="row.contenedor ?? '-'"></span>
                                     </td>
 
                                     <td class="px-4 py-4 text-slate-200">
-                                        <div x-text="row.descripcion"></div>
+                                        <div x-text="row.descripcion ?? ''"></div>
 
                                         <template x-if="row.cambios && row.cambios.length">
                                             <div class="mt-2 text-xs text-slate-400">
-                                                <div><span class="font-semibold text-slate-300">Pestaña:</span> <span x-text="row.modulo"></span></div>
+                                                <div><span class="font-semibold text-slate-300">Pestaña:</span> <span x-text="row.modulo ?? '-'"></span></div>
                                                 <div><span class="font-semibold text-slate-300">Campos:</span> <span x-text="row.cambios.join(', ')"></span></div>
                                             </div>
                                         </template>
@@ -149,18 +144,18 @@
     <script>
         function actividadUsuarioDetalle(serverUser) {
             return {
-                user: serverUser,
+                user: serverUser || {},
                 logs: [],
                 loading: false,
                 errorMsg: '',
 
-                filters: {
-                    accion: '',
-                    desde: '',
-                    hasta: '',
-                },
+                filters: { accion: '', desde: '', hasta: '' },
 
                 init() {
+                    if (!this.user?.id) {
+                        this.errorMsg = 'Usuario inválido.';
+                        return;
+                    }
                     this.load();
                 },
 
@@ -178,17 +173,17 @@
                         if (!res.ok) throw new Error('No se pudo consultar la actividad.');
 
                         const json = await res.json();
-                        this.logs = json.logs || [];
+                        this.logs = Array.isArray(json.logs) ? json.logs : [];
                     } catch (e) {
                         this.logs = [];
-                        this.errorMsg = e.message || 'Error al cargar actividad.';
+                        this.errorMsg = e?.message || 'Error al cargar actividad.';
                     } finally {
                         this.loading = false;
                     }
                 },
 
                 initials(name) {
-                    const s = (name || '').trim().split(/\s+/).slice(0,2).map(x => x[0]?.toUpperCase() || '').join('');
+                    const s = (name || '').trim().split(/\s+/).slice(0,2).map(x => (x[0]||'').toUpperCase()).join('');
                     return s || 'U';
                 },
 
@@ -204,7 +199,6 @@
                     if (a === 'crear') return 'Crear';
                     if (a === 'editar') return 'Editar';
                     if (a === 'ver') return 'Ver';
-                    if (a === 'eliminar') return 'Eliminar';
                     return a ? a : 'Acción';
                 },
 
@@ -213,7 +207,6 @@
                     if (a === 'crear') return 'bg-emerald-950/60 text-emerald-200 border-emerald-700/40';
                     if (a === 'editar') return 'bg-amber-950/60 text-amber-200 border-amber-700/40';
                     if (a === 'ver') return 'bg-blue-950/60 text-blue-200 border-blue-700/40';
-                    if (a === 'eliminar') return 'bg-red-950/60 text-red-200 border-red-700/40';
                     return 'bg-slate-800 text-slate-200 border-slate-700';
                 },
             }

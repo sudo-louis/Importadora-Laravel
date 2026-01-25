@@ -12,13 +12,19 @@
             </div>
         </template>
 
-        <template x-if="!loading && users.length === 0">
+        <template x-if="!loading && users.length === 0 && !errorMsg">
             <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-slate-300">
                 No hay usuarios para mostrar.
             </div>
         </template>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <template x-if="errorMsg">
+            <div class="rounded-2xl border border-red-800 bg-red-950/30 p-6 text-red-200">
+                <span x-text="errorMsg"></span>
+            </div>
+        </template>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-show="!loading && users.length > 0">
             <template x-for="u in users" :key="u.id">
                 <a :href="`/actividad/usuarios/${u.id}`"
                    class="group rounded-2xl border border-slate-800 bg-slate-900/60 shadow hover:bg-slate-900/80 transition overflow-hidden">
@@ -41,25 +47,23 @@
                     <div class="border-t border-slate-800 p-6 space-y-3">
                         <div class="flex items-center justify-between text-sm text-slate-300">
                             <span>Actividades</span>
-                            <span class="text-blue-300 font-bold" x-text="u.actividades_count ?? 0"></span>
+                            <span class="text-blue-300 font-bold" x-text="u.actividades ?? 0"></span>
                         </div>
 
                         <div class="flex items-center justify-between text-sm text-slate-300">
                             <span>Estado</span>
                             <span class="px-3 py-1 rounded-full text-xs font-semibold"
-                                  :class="u.is_active ? 'bg-emerald-950/60 text-emerald-200 border border-emerald-700/40' : 'bg-red-950/60 text-red-200 border border-red-700/40'"
-                                  x-text="u.is_active ? 'Activo' : 'Inactivo'"></span>
+                                  :class="(u.is_active ?? false)
+                                      ? 'bg-emerald-950/60 text-emerald-200 border border-emerald-700/40'
+                                      : 'bg-red-950/60 text-red-200 border border-red-700/40'"
+                                  x-text="(u.is_active ?? false) ? 'Activo' : 'Inactivo'"></span>
                         </div>
                     </div>
+
                 </a>
             </template>
         </div>
 
-        <template x-if="errorMsg">
-            <div class="rounded-2xl border border-red-800 bg-red-950/30 p-6 text-red-200">
-                <span x-text="errorMsg"></span>
-            </div>
-        </template>
     </div>
 
     <script>
@@ -73,23 +77,31 @@
                     this.loading = true;
                     this.errorMsg = '';
                     try {
-                        const res = await fetch('/actividad/usuarios/data', { headers: { 'Accept': 'application/json' } });
+                        const res = await fetch('/actividad/usuarios/data', {
+                            headers: { 'Accept': 'application/json' }
+                        });
+
                         if (!res.ok) throw new Error('No se pudo cargar la lista de usuarios.');
 
                         const json = await res.json();
 
-                        // ✅ Ajustado al backend: { ok:true, items:[...] }
-                        this.users = json.items || [];
+                        // soporta ambas formas:
+                        // { ok:true, users:[...] }  o  { ok:true, items:[...] }
+                        this.users = Array.isArray(json.users) ? json.users : (Array.isArray(json.items) ? json.items : []);
                     } catch (e) {
                         this.users = [];
-                        this.errorMsg = e.message || 'Error al cargar usuarios.';
+                        this.errorMsg = e?.message || 'Error al cargar usuarios.';
                     } finally {
                         this.loading = false;
                     }
                 },
 
                 initials(name) {
-                    const s = (name || '').trim().split(/\s+/).slice(0,2).map(x => x[0]?.toUpperCase() || '').join('');
+                    const s = (name || '').trim()
+                        .split(/\s+/)
+                        .slice(0, 2)
+                        .map(x => (x[0] || '').toUpperCase())
+                        .join('');
                     return s || 'U';
                 },
 

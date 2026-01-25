@@ -7,8 +7,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PlantillaController;
 use App\Http\Controllers\ReportesController;
 use App\Http\Controllers\UsuariosController;
-
-// Actividad
 use App\Http\Controllers\ActividadContenedoresController;
 use App\Http\Controllers\ActividadUsuariosController;
 
@@ -53,7 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reportes/autocomplete/contenedores', [ReportesController::class, 'autocompleteContenedores'])
         ->name('reportes.autocomplete.contenedores');
 
-    // ================= USUARIOS (módulo existente) =================
+    // ================= USUARIOS =================
     Route::get('/usuarios', [UsuariosController::class, 'index'])->name('usuarios.index');
     Route::get('/usuarios/data', [UsuariosController::class, 'data'])->name('usuarios.data');
 
@@ -71,19 +69,26 @@ Route::middleware(['auth'])->group(function () {
     Route::view('/actividad/contenedores', 'actividad.contenedores')->name('actividad.contenedores');
     Route::view('/actividad/usuarios', 'actividad.usuarios')->name('actividad.usuarios');
 
-    // --- Actividad por Contenedores (OK) ---
+    // --- Actividad por Contenedores ---
     Route::get('/actividad/contenedores/autocomplete', [ActividadContenedoresController::class, 'autocomplete'])
         ->name('actividad.contenedores.autocomplete');
 
     Route::get('/actividad/contenedores/search', [ActividadContenedoresController::class, 'search'])
         ->name('actividad.contenedores.search');
 
+    // --- Actividad por Usuarios ---
     Route::get('/actividad/usuarios/list', [ActividadUsuariosController::class, 'list'])
         ->name('actividad.usuarios.list');
 
     Route::get('/actividad/usuarios/data', [ActividadUsuariosController::class, 'list'])
         ->name('actividad.usuarios.data');
 
+    // ✅ Detalle (HTML) - esta ruta es la que te faltaba para evitar el 404
+    Route::get('/actividad/usuarios/{user}', [ActividadUsuariosController::class, 'show'])
+        ->whereNumber('user')
+        ->name('actividad.usuarios.show');
+
+    // Logs (JSON)
     Route::get('/actividad/usuarios/{user}/logs', [ActividadUsuariosController::class, 'logs'])
         ->whereNumber('user')
         ->name('actividad.usuarios.logs');
