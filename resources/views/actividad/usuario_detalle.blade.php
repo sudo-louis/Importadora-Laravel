@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div class="space-y-6" x-data="actividadUsuarioDetalle(@js($u))" x-init="init()">
+    <div class="space-y-6" x-data="actividadUsuarioDetalle({{ json_encode($u) }})" x-init="init()">
 
         <div>
             <h1 class="text-2xl font-bold text-white">Actividad por Usuario</h1>
@@ -13,6 +13,7 @@
             </a>
         </div>
 
+        {{-- Filtros --}}
         <div class="rounded-2xl border border-slate-800 bg-slate-900/60 shadow">
             <div class="p-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -20,7 +21,7 @@
                         <label class="block text-sm font-semibold text-white mb-2">Tipo de Acción</label>
                         <select class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
                                 x-model="filters.accion"
-                                @change="load()">
+                                @change="page=1; load()">
                             <option value="">Todas las acciones</option>
                             <option value="crear">Crear</option>
                             <option value="editar">Editar</option>
@@ -33,7 +34,7 @@
                         <input type="date"
                                class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
                                x-model="filters.desde"
-                               @change="load()" />
+                               @change="page=1; load()" />
                     </div>
 
                     <div>
@@ -41,12 +42,13 @@
                         <input type="date"
                                class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
                                x-model="filters.hasta"
-                               @change="load()" />
+                               @change="page=1; load()" />
                     </div>
                 </div>
             </div>
         </div>
 
+        {{-- Header usuario + Tabla --}}
         <div class="rounded-2xl border border-slate-800 bg-slate-900/60 shadow overflow-hidden">
             <div class="p-6 flex items-center justify-between gap-6">
                 <div class="flex items-center gap-4">
@@ -67,11 +69,51 @@
                 </div>
 
                 <div class="text-right">
-                    <div class="text-2xl font-extrabold text-blue-300" x-text="user.actividades ?? 0"></div>
+                    <div class="text-2xl font-extrabold text-blue-300" x-text="user.actividades"></div>
                     <div class="text-sm text-slate-300">Actividades</div>
                 </div>
             </div>
 
+            {{-- Barra paginación (arriba de tabla) --}}
+            <div class="border-t border-slate-800 bg-slate-950/30">
+                <div class="p-4 flex flex-wrap items-center gap-3">
+                    <div class="text-sm text-slate-300">
+                        <template x-if="pagination">
+                            <span>
+                                Mostrando <span class="font-semibold text-white" x-text="pagination.from ?? 0"></span>
+                                –
+                                <span class="font-semibold text-white" x-text="pagination.to ?? 0"></span>
+                                de <span class="font-semibold text-white" x-text="pagination.total ?? 0"></span>
+                            </span>
+                        </template>
+                    </div>
+
+                    <div class="ml-auto flex items-center gap-2">
+                        <button type="button"
+                                class="rounded-xl bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800"
+                                :disabled="loading || page <= 1"
+                                @click="prevPage()">
+                            ← Anterior
+                        </button>
+
+                        <div class="text-sm text-slate-300">
+                            Página <span class="font-semibold text-white" x-text="page"></span>
+                            <template x-if="pagination">
+                                <span> / <span class="font-semibold text-white" x-text="pagination.last_page"></span></span>
+                            </template>
+                        </div>
+
+                        <button type="button"
+                                class="rounded-xl bg-slate-800 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800"
+                                :disabled="loading || !pagination || page >= pagination.last_page"
+                                @click="nextPage()">
+                            Siguiente →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tabla --}}
             <div class="border-t border-slate-800">
                 <div class="p-0 overflow-x-auto">
                     <table class="min-w-full text-sm">
@@ -100,8 +142,8 @@
                             <template x-for="row in logs" :key="row.id">
                                 <tr class="border-t border-slate-800">
                                     <td class="px-4 py-4 text-slate-200">
-                                        <div class="font-semibold" x-text="row.fecha ?? ''"></div>
-                                        <div class="text-xs text-slate-500" x-text="row.hora ?? ''"></div>
+                                        <div class="font-semibold" x-text="row.fecha"></div>
+                                        <div class="text-xs text-slate-500" x-text="row.hora"></div>
                                     </td>
 
                                     <td class="px-4 py-4">
@@ -112,16 +154,22 @@
                                     </td>
 
                                     <td class="px-4 py-4">
-                                        <span class="text-blue-300 font-semibold" x-text="row.contenedor ?? '-'"></span>
+                                        <span class="text-blue-300 font-semibold" x-text="row.contenedor"></span>
                                     </td>
 
                                     <td class="px-4 py-4 text-slate-200">
-                                        <div x-text="row.descripcion ?? ''"></div>
+                                        <div x-text="row.descripcion"></div>
 
                                         <template x-if="row.cambios && row.cambios.length">
                                             <div class="mt-2 text-xs text-slate-400">
-                                                <div><span class="font-semibold text-slate-300">Pestaña:</span> <span x-text="row.modulo ?? '-'"></span></div>
-                                                <div><span class="font-semibold text-slate-300">Campos:</span> <span x-text="row.cambios.join(', ')"></span></div>
+                                                <div>
+                                                    <span class="font-semibold text-slate-300">Pestaña:</span>
+                                                    <span x-text="row.modulo"></span>
+                                                </div>
+                                                <div>
+                                                    <span class="font-semibold text-slate-300">Campos:</span>
+                                                    <span x-text="row.cambios.join(', ')"></span>
+                                                </div>
                                             </div>
                                         </template>
                                     </td>
@@ -144,18 +192,23 @@
     <script>
         function actividadUsuarioDetalle(serverUser) {
             return {
-                user: serverUser || {},
+                user: serverUser,
                 logs: [],
                 loading: false,
                 errorMsg: '',
 
-                filters: { accion: '', desde: '', hasta: '' },
+                // paginado
+                page: 1,
+                perPage: 20,
+                pagination: null,
+
+                filters: {
+                    accion: '',
+                    desde: '',
+                    hasta: '',
+                },
 
                 init() {
-                    if (!this.user?.id) {
-                        this.errorMsg = 'Usuario inválido.';
-                        return;
-                    }
                     this.load();
                 },
 
@@ -168,22 +221,49 @@
                         if (this.filters.desde) params.set('desde', this.filters.desde);
                         if (this.filters.hasta) params.set('hasta', this.filters.hasta);
 
+                        params.set('page', this.page);
+                        params.set('per_page', this.perPage);
+
                         const url = `/actividad/usuarios/${this.user.id}/logs?` + params.toString();
                         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                         if (!res.ok) throw new Error('No se pudo consultar la actividad.');
 
                         const json = await res.json();
-                        this.logs = Array.isArray(json.logs) ? json.logs : [];
+
+                        this.logs = json.logs || [];
+                        this.pagination = json.pagination || null;
+
+                        // protección: si cambió last_page y te quedaste fuera
+                        if (this.pagination && this.page > this.pagination.last_page) {
+                            this.page = this.pagination.last_page || 1;
+                        }
+
                     } catch (e) {
                         this.logs = [];
-                        this.errorMsg = e?.message || 'Error al cargar actividad.';
+                        this.pagination = null;
+                        this.errorMsg = e.message || 'Error al cargar actividad.';
                     } finally {
                         this.loading = false;
                     }
                 },
 
+                nextPage() {
+                    if (!this.pagination) return;
+                    if (this.page < this.pagination.last_page) {
+                        this.page++;
+                        this.load();
+                    }
+                },
+
+                prevPage() {
+                    if (this.page > 1) {
+                        this.page--;
+                        this.load();
+                    }
+                },
+
                 initials(name) {
-                    const s = (name || '').trim().split(/\s+/).slice(0,2).map(x => (x[0]||'').toUpperCase()).join('');
+                    const s = (name || '').trim().split(/\s+/).slice(0,2).map(x => x[0]?.toUpperCase() || '').join('');
                     return s || 'U';
                 },
 
@@ -199,6 +279,7 @@
                     if (a === 'crear') return 'Crear';
                     if (a === 'editar') return 'Editar';
                     if (a === 'ver') return 'Ver';
+                    if (a === 'eliminar') return 'Eliminar';
                     return a ? a : 'Acción';
                 },
 
@@ -207,6 +288,7 @@
                     if (a === 'crear') return 'bg-emerald-950/60 text-emerald-200 border-emerald-700/40';
                     if (a === 'editar') return 'bg-amber-950/60 text-amber-200 border-amber-700/40';
                     if (a === 'ver') return 'bg-blue-950/60 text-blue-200 border-blue-700/40';
+                    if (a === 'eliminar') return 'bg-red-950/60 text-red-200 border-red-700/40';
                     return 'bg-slate-800 text-slate-200 border-slate-700';
                 },
             }

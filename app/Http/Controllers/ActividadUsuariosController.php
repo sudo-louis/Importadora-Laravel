@@ -12,33 +12,33 @@ class ActividadUsuariosController extends Controller
     public function list(Request $request)
     {
         try {
+            // Trae usuarios + conteo de actividad (actividad_logs.user_id) + rol (primer rol)
             $users = User::query()
                 ->select(['id', 'name', 'email', 'is_active'])
-                ->withCount(['actividadLogs as actividades_count'])
+                ->withCount(['actividadLogs as actividades'])
                 ->with(['roles:id,name'])
-                ->orderByDesc('actividades_count')
+                ->orderByDesc('actividades')
                 ->orderBy('name')
-                ->limit(200)
+                ->limit(200) // puedes subir/bajar si quieres
                 ->get();
 
-            $mapped = $users->map(function (User $u) {
+            $items = $users->map(function (User $u) {
                 $roleName = $u->roles->first()?->name;
 
                 return [
                     'id' => $u->id,
                     'name' => $u->name,
                     'email' => $u->email,
-                    'username' => $u->username ?? null, // si existe en tu tabla, lo manda; si no, null
+                    'username' => $u->username ?? null, // si no existe en tu BD quedará null
                     'is_active' => (bool) $u->is_active,
                     'role_name' => $roleName,
-                    'actividades' => (int) ($u->actividades_count ?? 0),
+                    'actividades' => (int) ($u->actividades ?? 0),
                 ];
             })->values()->all();
 
             return response()->json([
                 'ok' => true,
-                'users' => $mapped,
-                'items' => $mapped,
+                'users' => $items,
             ]);
         } catch (\Throwable $e) {
             Log::error('ActividadUsuariosController@list ERROR', [
@@ -50,7 +50,6 @@ class ActividadUsuariosController extends Controller
             return response()->json([
                 'ok' => false,
                 'users' => [],
-                'items' => [],
                 'message' => 'Error cargando usuarios: ' . $e->getMessage(),
             ], 500);
         }
@@ -58,11 +57,13 @@ class ActividadUsuariosController extends Controller
 
     public function show(User $user)
     {
+        // Calcula rol y actividades para header (el blade lo usa)
         $user->loadMissing('roles:id,name');
-
         $roleName = $user->roles->first()?->name;
 
-        $actividades = ActividadLog::where('user_id', $user->id)->count();
+        $actividades = ActividadLog::query()
+            ->where('user_id', $user->id)
+            ->count();
 
         $u = [
             'id' => $user->id,
@@ -74,7 +75,6 @@ class ActividadUsuariosController extends Controller
             'actividades' => (int) $actividades,
         ];
 
-        // ✅ aquí está la corrección clave
         return view('actividad.usuario_detalle', compact('u'));
     }
 
@@ -82,10 +82,16 @@ class ActividadUsuariosController extends Controller
     {
         try {
             $data = $request->validate([
-                'accion' => ['nullable', 'string', 'max:50'],
-                'desde'  => ['nullable', 'date'],
-                'hasta'  => ['nullable', 'date'],
+                'accion'   => ['nullable', 'string', 'max:50'],
+                'desde'    => ['nullable', 'date'],
+                'hasta'    => ['nullable', 'date'],
+                'page'     => ['nullable', 'integer', 'min:1'],
+                'per_page' => ['nullable', 'integer', 'min:5', 'max:100'],
             ]);
+
+            $perPage = (int) ($data['per_page'] ?? 20);
+            if ($perPage < 5) $perPage = 5;
+            if ($perPage > 100) $perPage = 100;
 
             $q = ActividadLog::query()
                 ->with(['contenedor:id,numero_contenedor'])
@@ -102,9 +108,9 @@ class ActividadUsuariosController extends Controller
                 $q->whereDate('fecha_hora', '<=', $data['hasta']);
             }
 
-            $logs = $q->limit(500)->get()->map(function ($l) {
-                $fechaHora = $l->fecha_hora ? $l->fecha_hora->format('Y-m-d H:i:s') : null;
+            $page = $q->paginate($perPage)->withQueryString();
 
+            $logs = $page->getCollection()->map(function ($l) {
                 $cambios = $this->diffKeys(
                     (array) ($l->datos_anteriores ?? []),
                     (array) ($l->datos_nuevos ?? [])
@@ -115,13 +121,10 @@ class ActividadUsuariosController extends Controller
                     'accion' => $l->accion,
                     'modulo' => $l->modulo,
                     'descripcion' => $l->descripcion,
-                    'fecha_hora' => $fechaHora,
-
-                    // ✅ campos que tu tabla usa:
-                    'fecha' => $l->fecha_hora?->format('Y-m-d'),
-                    'hora'  => $l->fecha_hora?->format('H:i:s'),
-
-                    'contenedor' => $l->contenedor?->numero_contenedor ?? '-',
+                    'fecha_hora' => optional($l->fecha_hora)->format('Y-m-d H:i:s'),
+                    'fecha' => optional($l->fecha_hora)->format('Y-m-d') ?? '',
+                    'hora' => optional($l->fecha_hora)->format('H:i:s') ?? '',
+                    'contenedor' => $l->contenedor?->numero_contenedor ?? '',
                     'cambios' => $cambios,
                 ];
             })->values()->all();
@@ -129,6 +132,14 @@ class ActividadUsuariosController extends Controller
             return response()->json([
                 'ok' => true,
                 'logs' => $logs,
+                'pagination' => [
+                    'current_page' => $page->currentPage(),
+                    'last_page' => $page->lastPage(),
+                    'per_page' => $page->perPage(),
+                    'total' => $page->total(),
+                    'from' => $page->firstItem(),
+                    'to' => $page->lastItem(),
+                ],
             ]);
         } catch (\Throwable $e) {
             Log::error('ActividadUsuariosController@logs ERROR', [
@@ -140,6 +151,7 @@ class ActividadUsuariosController extends Controller
             return response()->json([
                 'ok' => false,
                 'logs' => [],
+                'pagination' => null,
                 'message' => 'Error cargando logs: ' . $e->getMessage(),
             ], 500);
         }
