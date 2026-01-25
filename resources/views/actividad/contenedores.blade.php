@@ -121,7 +121,7 @@
                                 <option value="crear">Crear</option>
                                 <option value="editar">Editar</option>
                                 <option value="ver">Ver</option>
-                                <option value="eliminar">Eliminar</option>
+                                {{-- ✅ Quitado "Eliminar" --}}
                             </select>
                         </div>
 
@@ -477,7 +477,7 @@
                     if (a === 'crear') return 'Crear';
                     if (a === 'editar') return 'Editar';
                     if (a === 'ver') return 'Ver';
-                    if (a === 'eliminar') return 'Eliminar';
+                    // ✅ Quitado "Eliminar"
                     return a ? a : 'Acción';
                 },
                 badgeLetter(a) {
@@ -485,7 +485,7 @@
                     if (a === 'crear') return 'C';
                     if (a === 'editar') return 'E';
                     if (a === 'ver') return 'V';
-                    if (a === 'eliminar') return 'X';
+                    // ✅ Quitado "Eliminar"
                     return '•';
                 },
                 badgeColor(a) {
@@ -493,7 +493,7 @@
                     if (a === 'crear') return 'bg-emerald-600';
                     if (a === 'editar') return 'bg-amber-600';
                     if (a === 'ver') return 'bg-blue-600';
-                    if (a === 'eliminar') return 'bg-red-600';
+                    // ✅ Quitado "Eliminar"
                     return 'bg-slate-700';
                 },
                 pillColor(a) {
@@ -501,7 +501,7 @@
                     if (a === 'crear') return 'bg-emerald-950/60 text-emerald-200 border border-emerald-700/40';
                     if (a === 'editar') return 'bg-amber-950/60 text-amber-200 border border-amber-700/40';
                     if (a === 'ver') return 'bg-blue-950/60 text-blue-200 border border-blue-700/40';
-                    if (a === 'eliminar') return 'bg-red-950/60 text-red-200 border border-red-700/40';
+                    // ✅ Quitado "Eliminar"
                     return 'bg-slate-800 text-slate-200 border border-slate-700';
                 },
             }

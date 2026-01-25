@@ -15,6 +15,12 @@ class PlantillaCampo extends Model
         'orden',
     ];
 
+    protected $casts = [
+        'orden' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function plantilla(): BelongsTo
     {
         return $this->belongsTo(Plantilla::class, 'plantilla_id');

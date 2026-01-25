@@ -3,31 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends Model
 {
-    // ✅ Tu BD real
-    protected $table = 'roles';
+    protected $fillable = [
+        'name',
+        'color',
+        'description',
+    ];
 
-    protected $fillable = ['name', 'color'];
-
-    public function users()
+    public function users(): BelongsToMany
     {
-        return $this->belongsToMany(
-            User::class,
-            'user_role',   // ✅ pivote real
-            'role_id',
-            'user_id'
-        )->withTimestamps();
+        return $this->belongsToMany(User::class, 'user_role', 'role_id', 'user_id')
+            ->withTimestamps();
     }
 
-    public function permisos()
+    public function permisos(): BelongsToMany
     {
-        return $this->belongsToMany(
-            Permiso::class,
-            'role_permiso', // ✅ pivote real
-            'role_id',
-            'permiso_id'
-        )->withTimestamps();
+        return $this->belongsToMany(Permiso::class, 'role_permiso', 'role_id', 'permiso_id')
+            ->withTimestamps();
     }
 }

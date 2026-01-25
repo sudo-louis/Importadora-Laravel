@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Cotizacion extends Model
 {
@@ -15,15 +16,17 @@ class Cotizacion extends Model
         'honorarios',
         'maniobras',
         'almacenaje',
-        // 'total' NO porque es columna generada
+        // 'total' es generado en DB (según tu comentario)
     ];
 
     protected $casts = [
         'fecha_pago' => 'date',
-        'impuestos' => 'decimal:2',
-        'honorarios' => 'decimal:2',
-        'maniobras' => 'decimal:2',
-        'almacenaje' => 'decimal:2',
-        'total' => 'decimal:2', // OK para leer
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
+
+    public function contenedor(): BelongsTo
+    {
+        return $this->belongsTo(Contenedor::class, 'contenedor_id');
+    }
 }

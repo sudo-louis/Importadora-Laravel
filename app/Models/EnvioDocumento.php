@@ -18,10 +18,12 @@ class EnvioDocumento extends Model
     protected $casts = [
         'enviado' => 'boolean',
         'fecha_envio' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function contenedor(): BelongsTo
     {
-        return $this->belongsTo(Contenedor::class);
+        return $this->belongsTo(Contenedor::class, 'contenedor_id');
     }
 }

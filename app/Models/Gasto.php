@@ -18,10 +18,12 @@ class Gasto extends Model
 
     protected $casts = [
         'monto' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function contenedor(): BelongsTo
     {
-        return $this->belongsTo(Contenedor::class);
+        return $this->belongsTo(Contenedor::class, 'contenedor_id');
     }
 }

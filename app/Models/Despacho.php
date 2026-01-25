@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Despacho extends Model
 {
@@ -10,16 +11,10 @@ class Despacho extends Model
 
     protected $fillable = [
         'contenedor_id',
-
-        // Pedimento
         'numero_pedimento',
         'clave_pedimento',
         'importador',
-
-        // Proceso
         'tipo_carga',
-
-        // Fechas
         'fecha_carga',
         'reconocimiento_aduanero',
         'fecha_pago',
@@ -28,18 +23,17 @@ class Despacho extends Model
     ];
 
     protected $casts = [
-        'fecha_carga'             => 'date',
+        'fecha_carga' => 'date',
         'reconocimiento_aduanero' => 'date',
-        'fecha_pago'              => 'date',
-        'fecha_modulacion'        => 'date',
-        'fecha_entrega'           => 'date',
+        'fecha_pago' => 'date',
+        'fecha_modulacion' => 'date',
+        'fecha_entrega' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * Relación inversa
-     */
-    public function contenedor()
+    public function contenedor(): BelongsTo
     {
-        return $this->belongsTo(Contenedor::class);
+        return $this->belongsTo(Contenedor::class, 'contenedor_id');
     }
 }

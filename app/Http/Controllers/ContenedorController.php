@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActividadLog;
 use App\Models\Contenedor;
 use App\Models\Cotizacion;
 use App\Models\Despacho;
@@ -9,6 +10,7 @@ use App\Models\EnvioDocumento;
 use App\Models\Gasto;
 use App\Models\Liberacion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 class ContenedorController extends Controller
@@ -38,7 +40,6 @@ class ContenedorController extends Controller
         }
 
         $contenedores = $q->paginate(9)->withQueryString();
-
         return view('contenedores.index', compact('contenedores'));
     }
 
@@ -56,7 +57,22 @@ class ContenedorController extends Controller
         $data['estado'] = 'pendiente';
         $data['created_by'] = auth()->id();
 
-        Contenedor::create($data);
+        $contenedor = null;
+
+        DB::transaction(function () use ($data, &$contenedor) {
+            $contenedor = Contenedor::create($data);
+
+            $this->logActividad(
+                $contenedor,
+                'crear',
+                'registro',
+                'Contenedor creado con información inicial',
+                [],
+                $this->onlyKeys($contenedor->toArray(), [
+                    'numero_contenedor','cliente','fecha_llegada','proveedor','naviera','mercancia_recibida','estado'
+                ])
+            );
+        });
 
         return redirect()
             ->route('contenedores.index')
@@ -77,6 +93,18 @@ class ContenedorController extends Controller
             'despacho',
             'gastos',
         ]);
+
+        // ✅ OPCIONAL: si quieres registrar "ver", descomenta esto.
+        /*
+        $this->logActividad(
+            $contenedor,
+            'ver',
+            'registro',
+            'Visualización del contenedor',
+            [],
+            []
+        );
+        */
 
         return view('contenedores.show', compact('contenedor', 'mode', 'tab'));
     }
@@ -113,11 +141,17 @@ class ContenedorController extends Controller
         if (!$data['revalidacion']) $data['fecha_revalidacion'] = null;
 
         DB::transaction(function () use ($contenedor, $data) {
+
+            $before = $contenedor->liberacion
+                ? $contenedor->liberacion->toArray()
+                : [];
+
             $libData = collect($data)->except('gastos')->toArray();
             $lib = $contenedor->liberacion ?: new Liberacion(['contenedor_id' => $contenedor->id]);
             $lib->fill($libData);
             $lib->save();
 
+            // gastos liberación
             $contenedor->gastosLiberacion()->delete();
 
             $gastos = $data['gastos'] ?? [];
@@ -134,6 +168,17 @@ class ContenedorController extends Controller
                     'monto' => $monto ?? 0,
                 ]);
             }
+
+            $after = $lib->fresh()->toArray();
+
+            $this->logActividad(
+                $contenedor,
+                'editar',
+                'liberacion',
+                'Actualización de pestaña Liberación',
+                $before,
+                $after
+            );
         });
 
         return redirect()
@@ -147,6 +192,10 @@ class ContenedorController extends Controller
             'enviado' => ['nullable','boolean'],
             'fecha_envio' => ['nullable','date'],
         ]);
+
+        $beforeDoc = $contenedor->envioDocumento
+            ? $this->onlyKeys($contenedor->envioDocumento->toArray(), ['enviado','fecha_envio'])
+            : ['enviado' => null, 'fecha_envio' => null];
 
         $enviado = (bool) ($request->input('enviado', false));
 
@@ -165,6 +214,17 @@ class ContenedorController extends Controller
         ]);
         $doc->save();
 
+        $afterDoc = $this->onlyKeys($doc->fresh()->toArray(), ['enviado','fecha_envio']);
+
+        $this->logActividad(
+            $contenedor,
+            'editar',
+            'docs',
+            'Actualización de pestaña Envío de Docs',
+            $beforeDoc,
+            $afterDoc
+        );
+
         return redirect()
             ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'docs'])
             ->with('success', 'Envío de documentos actualizado');
@@ -180,13 +240,18 @@ class ContenedorController extends Controller
             'almacenaje' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $cot = $contenedor->cotizacion;
+
+        $before = $cot ? $this->onlyKeys($cot->toArray(), [
+            'fecha_pago','impuestos','honorarios','maniobras','almacenaje'
+        ]) : [];
+
         $impuestos  = (float) ($data['impuestos'] ?? 0);
         $honorarios = (float) ($data['honorarios'] ?? 0);
         $maniobras  = (float) ($data['maniobras'] ?? 0);
         $almacenaje = (float) ($data['almacenaje'] ?? 0);
 
-        $cot = $contenedor->cotizacion ?: new Cotizacion(['contenedor_id' => $contenedor->id]);
-
+        $cot = $cot ?: new Cotizacion(['contenedor_id' => $contenedor->id]);
         $cot->fill([
             'fecha_pago' => $data['fecha_pago'] ?? null,
             'impuestos' => $impuestos,
@@ -194,9 +259,20 @@ class ContenedorController extends Controller
             'maniobras' => $maniobras,
             'almacenaje' => $almacenaje,
         ]);
-
         $cot->save();
-        $cot->refresh();
+
+        $after = $this->onlyKeys($cot->fresh()->toArray(), [
+            'fecha_pago','impuestos','honorarios','maniobras','almacenaje'
+        ]);
+
+        $this->logActividad(
+            $contenedor,
+            'editar',
+            'cotizacion',
+            'Actualización de pestaña Cotización',
+            $before,
+            $after
+        );
 
         return redirect()
             ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'cotizacion'])
@@ -219,9 +295,24 @@ class ContenedorController extends Controller
             'fecha_entrega'           => ['nullable','date'],
         ]);
 
-        $despacho = $contenedor->despacho ?: new Despacho(['contenedor_id' => $contenedor->id]);
+        $desp = $contenedor->despacho;
+
+        $before = $desp ? $desp->toArray() : [];
+
+        $despacho = $desp ?: new Despacho(['contenedor_id' => $contenedor->id]);
         $despacho->fill($data);
         $despacho->save();
+
+        $after = $despacho->fresh()->toArray();
+
+        $this->logActividad(
+            $contenedor,
+            'editar',
+            'despacho',
+            'Actualización de pestaña Despacho',
+            $before,
+            $after
+        );
 
         return redirect()
             ->route('contenedores.show', ['contenedor' => $contenedor->id, 'mode' => 'edit', 'tab' => 'despacho'])
@@ -238,6 +329,14 @@ class ContenedorController extends Controller
         ]);
 
         DB::transaction(function () use ($contenedor, $data) {
+
+            // BEFORE: snapshot simple
+            $before = $contenedor->gastos()
+                ->orderBy('id')
+                ->get()
+                ->map(fn($g) => $this->onlyKeys($g->toArray(), ['id','descripcion','monto']))
+                ->values()
+                ->all();
 
             $actuales = $contenedor->gastos()->get();
             $actualIds = $actuales->pluck('id')->all();
@@ -283,6 +382,23 @@ class ContenedorController extends Controller
                     ->whereIn('id', $toDelete)
                     ->delete();
             }
+
+            // AFTER
+            $after = $contenedor->gastos()
+                ->orderBy('id')
+                ->get()
+                ->map(fn($g) => $this->onlyKeys($g->toArray(), ['id','descripcion','monto']))
+                ->values()
+                ->all();
+
+            $this->logActividad(
+                $contenedor,
+                'editar',
+                'gastos',
+                'Actualización de pestaña Gastos',
+                ['gastos' => $before],
+                ['gastos' => $after]
+            );
         });
 
         return redirect()
@@ -293,6 +409,11 @@ class ContenedorController extends Controller
     public function destroy(Contenedor $contenedor)
     {
         DB::transaction(function () use ($contenedor) {
+            // BEFORE snapshot (mínimo)
+            $before = $this->onlyKeys($contenedor->toArray(), [
+                'numero_contenedor','cliente','fecha_llegada','proveedor','naviera','mercancia_recibida','estado'
+            ]);
+
             // Si tus FK tienen ON DELETE CASCADE, esto no estorba, pero es seguro.
             $contenedor->gastosLiberacion()?->delete();
             $contenedor->gastos()?->delete();
@@ -301,11 +422,55 @@ class ContenedorController extends Controller
             $contenedor->cotizacion()?->delete();
             $contenedor->despacho()?->delete();
 
+            $this->logActividad(
+                $contenedor,
+                'eliminar',
+                'registro',
+                'Contenedor eliminado',
+                $before,
+                []
+            );
+
             $contenedor->delete();
         });
 
         return redirect()
             ->route('contenedores.index')
             ->with('success', 'Contenedor eliminado correctamente');
+    }
+
+    // =========================
+    // Helpers de actividad
+    // =========================
+
+    private function logActividad(
+        Contenedor $contenedor,
+        string $accion,
+        string $modulo,
+        string $descripcion,
+        array $before = [],
+        array $after = []
+    ): void {
+        $userId = auth()->id();
+        if (!$userId) return;
+
+        // No guardamos "editar" si no cambió nada
+        if (strtolower($accion) === 'editar' && $before == $after) return;
+
+        ActividadLog::create([
+            'user_id' => $userId,
+            'contenedor_id' => $contenedor->id,
+            'accion' => strtolower($accion),
+            'modulo' => strtolower($modulo),
+            'descripcion' => $descripcion,
+            'datos_anteriores' => $before,
+            'datos_nuevos' => $after,
+            'fecha_hora' => now(),
+        ]);
+    }
+
+    private function onlyKeys(array $data, array $keys): array
+    {
+        return Arr::only($data, $keys);
     }
 }

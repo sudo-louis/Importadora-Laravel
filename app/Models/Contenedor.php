@@ -24,6 +24,8 @@ class Contenedor extends Model
 
     protected $casts = [
         'fecha_llegada' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function creador(): BelongsTo
@@ -41,15 +43,31 @@ class Contenedor extends Model
         return $this->hasOne(EnvioDocumento::class, 'contenedor_id');
     }
 
-    public function cotizacion(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function cotizacion(): HasOne
     {
-        return $this->hasOne(\App\Models\Cotizacion::class, 'contenedor_id');
+        return $this->hasOne(Cotizacion::class, 'contenedor_id');
     }
 
+    public function despacho(): HasOne
+    {
+        return $this->hasOne(Despacho::class, 'contenedor_id');
+    }
 
     public function gastosLiberacion(): HasMany
     {
-        return $this->hasMany(Gasto::class, 'contenedor_id')->where('tipo', 'liberacion');
+        return $this->hasMany(Gasto::class, 'contenedor_id')
+            ->where('tipo', 'liberacion');
+    }
+
+    public function gastos(): HasMany
+    {
+        return $this->hasMany(Gasto::class, 'contenedor_id')
+            ->where('tipo', 'general');
+    }
+
+    public function actividadLogs(): HasMany
+    {
+        return $this->hasMany(ActividadLog::class, 'contenedor_id');
     }
 
     public function getEstadoLabelAttribute(): string
@@ -60,15 +78,5 @@ class Contenedor extends Model
             'entregado' => 'Entregado',
             default => 'Desconocido',
         };
-    }
-
-    public function despacho()
-    {
-        return $this->hasOne(\App\Models\Despacho::class);
-    }
-
-    public function gastos(): HasMany
-    {
-        return $this->hasMany(Gasto::class, 'contenedor_id')->where('tipo', 'general');
     }
 }

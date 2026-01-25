@@ -33,14 +33,12 @@ class Liberacion extends Model
         'fecha_garantia' => 'date',
         'fecha_demora' => 'date',
         'fecha_flete' => 'date',
-        'costo_liberacion' => 'decimal:2',
-        'garantia' => 'decimal:2',
-        'costos_demora' => 'decimal:2',
-        'flete_maritimo' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function contenedor(): BelongsTo
     {
-        return $this->belongsTo(Contenedor::class);
+        return $this->belongsTo(Contenedor::class, 'contenedor_id');
     }
 }
