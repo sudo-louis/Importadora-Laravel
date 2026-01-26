@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Permiso;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AdminUserSeeder extends Seeder
 {
@@ -16,33 +15,65 @@ class AdminUserSeeder extends Seeder
     {
         DB::transaction(function () {
 
-            $admin = User::query()->updateOrCreate(
-                ['email' => 'admin@logistic.mx'],
+            $adminEmail = 'admin@logistic.mx';
+
+            $user = User::query()->firstOrCreate(
+                ['email' => $adminEmail],
                 [
-                    'name' => 'Super Admin',
-                    'password' => Hash::make('JSDFH6758__!!'), // 👈 cámbiala si quieres
+                    'name' => 'SuperAdmin',
+                    'password' => Hash::make('admin321'), // <-- CAMBIA ESTO
                     'is_active' => true,
                 ]
             );
+
+            $user->update([
+                'name' => $user->name ?: 'Super Admin',
+                'is_active' => true,
+            ]);
 
             $role = Role::query()->firstOrCreate(
                 ['name' => 'SUPERADMIN'],
                 [
                     'color' => 'Rojo',
-                    'description' => 'Rol con acceso total al sistema',
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'description' => 'Acceso total al sistema',
                 ]
             );
 
-            $admin->roles()->syncWithoutDetaching([$role->id]);
+            $allPermisoIds = Permiso::query()->pluck('id')->all();
 
-            $permisoIds = Permiso::query()->pluck('id')->all();
+            if (method_exists($role, 'permisos')) {
+                $role->permisos()->syncWithoutDetaching($allPermisoIds);
+            } else {
+                $existing = DB::table('role_permiso')
+                    ->where('role_id', $role->id)
+                    ->pluck('permiso_id')
+                    ->all();
 
-            $role->permisos()->syncWithoutDetaching($permisoIds);
+                $toInsert = array_values(array_diff($allPermisoIds, $existing));
 
-            $admin->is_active = true;
-            $admin->save();
+                $now = now();
+                foreach ($toInsert as $pid) {
+                    DB::table('role_permiso')->insert([
+                        'role_id' => $role->id,
+                        'permiso_id' => $pid,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+                }
+            }
+
+            if (method_exists($user, 'roles')) {
+                $user->roles()->sync([$role->id]);
+            } else {
+                DB::table('user_role')->where('user_id', $user->id)->delete();
+
+                DB::table('user_role')->insert([
+                    'user_id' => $user->id,
+                    'role_id' => $role->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         });
     }
 }
