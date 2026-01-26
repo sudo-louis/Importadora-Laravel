@@ -76,13 +76,9 @@ class ReportesController extends Controller
         );
     }
 
-    /**
-     * ✅ Autocomplete CLIENTES filtrado por rango (from/to)
-     * Query params esperados:
-     * - q (string, min 2)
-     * - from (date, opcional)
-     * - to (date, opcional)
-     */
+    // =========================
+    // Autocomplete CLIENTES
+    // =========================
     public function autocompleteClientes(Request $request)
     {
         try {
@@ -102,14 +98,12 @@ class ReportesController extends Controller
                 ->whereNotNull('cliente')
                 ->where('cliente', '!=', '');
 
-            // ✅ aplica rango si viene completo (recomendado)
             if ($from && $to) {
                 $fromD = Carbon::parse($from)->startOfDay()->toDateString();
                 $toD   = Carbon::parse($to)->endOfDay()->toDateString();
                 $query->whereBetween('fecha_llegada', [$fromD, $toD]);
             }
 
-            // Búsqueda por palabras
             $q = preg_replace('/\s+/', ' ', $q);
             $parts = array_values(array_filter(explode(' ', $q), fn ($p) => mb_strlen($p) >= 2));
             foreach ($parts as $p) {
@@ -138,13 +132,9 @@ class ReportesController extends Controller
         }
     }
 
-    /**
-     * ✅ Autocomplete CONTENEDORES filtrado por rango (from/to)
-     * Query params esperados:
-     * - q (string, min 2)
-     * - from (date, opcional)
-     * - to (date, opcional)
-     */
+    // =========================
+    // Autocomplete CONTENEDORES
+    // =========================
     public function autocompleteContenedores(Request $request)
     {
         try {
@@ -164,7 +154,6 @@ class ReportesController extends Controller
                 ->whereNotNull('numero_contenedor')
                 ->where('numero_contenedor', '!=', '');
 
-            // ✅ aplica rango si viene completo
             if ($from && $to) {
                 $fromD = Carbon::parse($from)->startOfDay()->toDateString();
                 $toD   = Carbon::parse($to)->endOfDay()->toDateString();
@@ -211,20 +200,12 @@ class ReportesController extends Controller
         $from = Carbon::parse($filters['from'])->startOfDay();
         $to   = Carbon::parse($filters['to'])->endOfDay();
 
-        $q = Contenedor::query()
-            ->with(['liberacion', 'envioDocumento', 'cotizacion', 'despacho', 'gastos'])
+        return Contenedor::query()
+            ->with(['liberacion', 'envioDocumento', 'cotizacion', 'despacho', 'gastos', 'creador'])
             ->whereBetween('fecha_llegada', [$from->toDateString(), $to->toDateString()])
+            ->when(!empty($filters['clientes']), fn ($q) => $q->whereIn('cliente', $filters['clientes']))
+            ->when(!empty($filters['contenedores']), fn ($q) => $q->whereIn('numero_contenedor', $filters['contenedores']))
             ->orderBy('fecha_llegada', 'desc');
-
-        if (!empty($filters['clientes'])) {
-            $q->whereIn('cliente', $filters['clientes']);
-        }
-
-        if (!empty($filters['contenedores'])) {
-            $q->whereIn('numero_contenedor', $filters['contenedores']);
-        }
-
-        return $q;
     }
 
     private function normalizeList($value): array
@@ -312,66 +293,153 @@ class ReportesController extends Controller
         return [[], 'Reporte'];
     }
 
+    /**
+     * ✅ DEFAULTS ACTUALIZADAS SEGÚN TU REGLA
+     * - Financiero: todo costos/gastos
+     * - General: solo datos iniciales
+     * - Trazabilidad: todos los campos tipo fecha (date/datetime) relevantes
+     */
     private function defaultTemplates(): array
     {
         return [
             [
-                'id' => 1, 'key' => 'default:financiero', 'label' => 'Reporte Financiero', 'icon' => '💲', 'source' => 'default',
+                'id' => 1,
+                'key' => 'default:financiero',
+                'label' => 'Reporte Financiero',
+                'icon' => '💲',
+                'source' => 'default',
                 'fields' => [
-                    'numero_contenedor','cliente','fecha_arribo',
-                    'docs.docs_enviados','docs.fecha_envio',
-                    'cotizacion.fecha_pago','cotizacion.impuestos','cotizacion.honorarios','cotizacion.maniobras','cotizacion.almacenaje','cotizacion.total',
-                    'gastos.gastos_generales','gastos.total_gastos',
+                    // base
+                    'numero_contenedor',
+                    'cliente',
+                    'fecha_arribo',
+
+                    // cotización (costos)
+                    'cotizacion.fecha_pago',
+                    'cotizacion.impuestos',
+                    'cotizacion.honorarios',
+                    'cotizacion.maniobras',
+                    'cotizacion.almacenaje',
+                    'cotizacion.total',
+
+                    // liberación (costos)
+                    'liberacion.costo_liberacion',
+                    'liberacion.garantia',
+                    'liberacion.costos_demora',
+                    'liberacion.flete_maritimo',
+
+                    // gastos (totales + detalle)
+                    'gastos.gastos_generales',
+                    'gastos.gastos_liberacion',
+                    'gastos.total_gastos',
+                    'gastos.detalle_generales',
+                    'gastos.detalle_liberacion',
                 ],
             ],
             [
-                'id' => 2, 'key' => 'default:general', 'label' => 'Reporte General', 'icon' => '🧾', 'source' => 'default',
+                'id' => 2,
+                'key' => 'default:general',
+                'label' => 'Reporte General',
+                'icon' => '🧾',
+                'source' => 'default',
                 'fields' => [
-                    'numero_contenedor','cliente','fecha_arribo','proveedor','naviera','mercancia_recibida',
-                    'estado','fecha_registro','dias_transcurridos',
+                    // SOLO lo inicial al crear un contenedor
+                    'numero_contenedor',    // Contenedor / Guía
+                    'cliente',              // Cliente que manda
+                    'fecha_arribo',         // Fecha de llegada
+                    'proveedor',
+                    'naviera',
+                    'mercancia_recibida',
                 ],
             ],
             [
-                'id' => 3, 'key' => 'default:trazabilidad', 'label' => 'Reporte de Trazabilidad', 'icon' => '🕒', 'source' => 'default',
+                'id' => 3,
+                'key' => 'default:trazabilidad',
+                'label' => 'Reporte de Trazabilidad',
+                'icon' => '🕒',
+                'source' => 'default',
                 'fields' => [
-                    'numero_contenedor','cliente','fecha_arribo','estado',
-                    'liberacion.fecha_liberacion','docs.fecha_envio','cotizacion.fecha_pago',
-                    'despacho.fecha_modulacion','despacho.fecha_entrega',
+                    // base
+                    'numero_contenedor',
+                    'cliente',
+                    'fecha_arribo',
+                    'fecha_registro',
+
+                    // docs
+                    'docs.fecha_envio',
+
+                    // cotización
+                    'cotizacion.fecha_pago',
+
+                    // liberación (todas las fechas)
+                    'liberacion.fecha_revalidacion',
+                    'liberacion.fecha_liberacion',
+                    'liberacion.fecha_garantia',
+                    'liberacion.fecha_demora',
+                    'liberacion.fecha_flete',
+
+                    // despacho (todas las fechas)
+                    'despacho.fecha_carga',
+                    'despacho.reconocimiento_aduanero',
+                    'despacho.fecha_pago',
+                    'despacho.fecha_modulacion',
+                    'despacho.fecha_entrega',
                 ],
             ],
         ];
     }
 
+    /**
+     * ✅ Labels humanizados (sin "liberacion.costo_liberacion")
+     */
     private function fieldLabels(): array
     {
         return [
-            'numero_contenedor' => 'Contenedor',
-            'cliente' => 'Cliente',
-            'fecha_arribo' => 'Fecha Arribo',
-            'proveedor' => 'Proveedor',
-            'naviera' => 'Naviera',
-            'mercancia_recibida' => 'Mercancía',
-            'estado' => 'Estado',
-            'fecha_registro' => 'Fecha Registro',
-            'dias_transcurridos' => 'Días Transcurridos',
+            // base contenedor
+            'numero_contenedor'   => 'Contenedor / Guía',
+            'cliente'             => 'Cliente',
+            'fecha_arribo'        => 'Fecha de llegada',
+            'proveedor'           => 'Proveedor',
+            'naviera'             => 'Naviera',
+            'mercancia_recibida'  => 'Mercancía recibida',
+            'fecha_registro'      => 'Fecha de registro',
 
-            'docs.docs_enviados' => 'Docs Enviados',
-            'docs.fecha_envio'   => 'Fecha Envío',
+            // docs
+            'docs.docs_enviados' => 'Documentos enviados',
+            'docs.fecha_envio'   => 'Fecha de envío',
 
-            'cotizacion.fecha_pago'   => 'Fecha Pago',
+            // cotización
+            'cotizacion.fecha_pago'   => 'Fecha pago (cotización)',
             'cotizacion.impuestos'    => 'Impuestos',
             'cotizacion.honorarios'   => 'Honorarios',
             'cotizacion.maniobras'    => 'Maniobras',
             'cotizacion.almacenaje'   => 'Almacenaje',
-            'cotizacion.total'        => 'Total Cotización',
+            'cotizacion.total'        => 'Total cotización',
 
-            'liberacion.fecha_liberacion' => 'Fecha Liberación',
+            // liberación (costos + fechas)
+            'liberacion.fecha_revalidacion'  => 'Fecha revalidación',
+            'liberacion.costo_liberacion'    => 'Costo liberación',
+            'liberacion.fecha_liberacion'    => 'Fecha liberación',
+            'liberacion.garantia'            => 'Garantía',
+            'liberacion.fecha_garantia'      => 'Fecha garantía',
+            'liberacion.costos_demora'       => 'Costos de demora',
+            'liberacion.fecha_demora'        => 'Fecha demora',
+            'liberacion.flete_maritimo'      => 'Flete marítimo',
+            'liberacion.fecha_flete'         => 'Fecha flete',
 
-            'despacho.fecha_modulacion' => 'Fecha Modulación',
-            'despacho.fecha_entrega'    => 'Fecha Entrega',
+            // despacho (fechas)
+            'despacho.fecha_carga'             => 'Fecha de carga',
+            'despacho.reconocimiento_aduanero' => 'Reconocimiento aduanero',
+            'despacho.fecha_pago'              => 'Fecha de pago (despacho)',
+            'despacho.fecha_modulacion'        => 'Fecha de modulación',
+            'despacho.fecha_entrega'           => 'Fecha de entrega',
 
-            'gastos.gastos_generales' => 'Gastos Generales',
-            'gastos.total_gastos'     => 'Total Gastos',
+            // gastos
+            'gastos.gastos_generales'   => 'Gastos generales (total)',
+            'gastos.gastos_liberacion'  => 'Gastos liberación (total)',
+            'gastos.total_gastos'       => 'Total de gastos',
+            'gastos.detalle_generales'  => 'Detalle gastos generales',
+            'gastos.detalle_liberacion' => 'Detalle gastos liberación',
         ];
     }
 

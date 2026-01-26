@@ -16,7 +16,6 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 class ReporteExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithEvents
 {
@@ -34,7 +33,7 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
 
     public function headings(): array
     {
-        return array_map(fn($k) => $this->labels[$k] ?? $k, $this->fields);
+        return array_map(fn ($k) => $this->labels[$k] ?? $k, $this->fields);
     }
 
     public function map($c): array
@@ -49,9 +48,9 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
 
     private function resolveField(Contenedor $c, string $key)
     {
-        $date = fn($v) => $v ? Carbon::parse($v)->format('Y-m-d') : '';
-        $dt   = fn($v) => $v ? Carbon::parse($v)->format('Y-m-d H:i') : '';
-        $num  = fn($v) => is_null($v) ? '' : (float)$v;
+        $date = fn ($v) => $v ? Carbon::parse($v)->format('Y-m-d') : '';
+        $dt   = fn ($v) => $v ? Carbon::parse($v)->format('Y-m-d H:i') : '';
+        $num  = fn ($v) => is_null($v) ? '' : (float) $v;
 
         $lib  = $c->liberacion;
         $docs = $c->envioDocumento;
@@ -62,15 +61,14 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
         $gastosLiberacion = $gastosAll->where('tipo', 'liberacion');
         $gastosGenerales  = $gastosAll->where('tipo', '!=', 'liberacion');
 
-        // ✅ Normaliza keys que vengan como "grupo.campo"
-        // Ej: "docs.fecha_envio" => group=docs, field=fecha_envio
+        // Normaliza keys "grupo.campo"
         $group = null;
         $field = $key;
 
         if (str_contains($key, '.')) {
             [$group, $field] = explode('.', $key, 2);
-            $group = trim((string)$group);
-            $field = trim((string)$field);
+            $group = trim((string) $group);
+            $field = trim((string) $field);
         }
 
         // =========================
@@ -105,7 +103,7 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
                 'fecha_liberacion'    => $date($lib?->fecha_liberacion),
                 'garantia'            => $num($lib?->garantia),
                 'fecha_garantia'      => $date($lib?->fecha_garantia),
-                'devolucion_garantia' => (string)($lib?->devolucion_garantia ?? ''),
+                'devolucion_garantia' => (string) ($lib?->devolucion_garantia ?? ''),
                 'costos_demora'       => $num($lib?->costos_demora),
                 'fecha_demora'        => $date($lib?->fecha_demora),
                 'flete_maritimo'      => $num($lib?->flete_maritimo),
@@ -116,10 +114,10 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
 
         if ($group === 'despacho') {
             return match ($field) {
-                'numero_pedimento'        => (string)($des?->numero_pedimento ?? ''),
-                'clave_pedimento'         => (string)($des?->clave_pedimento ?? ''),
-                'importador'              => (string)($des?->importador ?? ''),
-                'tipo_carga'              => (string)($des?->tipo_carga ?? ''),
+                'numero_pedimento'        => (string) ($des?->numero_pedimento ?? ''),
+                'clave_pedimento'         => (string) ($des?->clave_pedimento ?? ''),
+                'importador'              => (string) ($des?->importador ?? ''),
+                'tipo_carga'              => (string) ($des?->tipo_carga ?? ''),
                 'fecha_carga'             => $date($des?->fecha_carga),
                 'reconocimiento_aduanero' => $date($des?->reconocimiento_aduanero),
                 'fecha_pago'              => $date($des?->fecha_pago),
@@ -131,11 +129,15 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
 
         if ($group === 'gastos') {
             return match ($field) {
-                // Si en tu UI "gastos_generales" significa "suma de tipo != liberacion"
-                'gastos_generales' => $num($gastosGenerales->sum('monto')),
+                'gastos_generales'  => $num($gastosGenerales->sum('monto')),
                 'gastos_liberacion' => $num($gastosLiberacion->sum('monto')),
-                'total_gastos'     => $num($gastosAll->sum('monto')),
-                default            => '',
+                'total_gastos'      => $num($gastosAll->sum('monto')),
+
+                // ✅ Detalle legible para financiero
+                'detalle_generales' => $this->formatGastosDetalle($gastosGenerales),
+                'detalle_liberacion'=> $this->formatGastosDetalle($gastosLiberacion),
+
+                default             => '',
             };
         }
 
@@ -143,7 +145,6 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
         // 2) Keys sin prefijo (compat)
         // =========================
         return match ($key) {
-            // contenedores
             'numero_contenedor'   => (string) $c->numero_contenedor,
             'cliente'             => (string) $c->cliente,
             'fecha_arribo'        => $date($c->fecha_llegada),
@@ -154,26 +155,23 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
             'estado'              => (string) ($c->estado_label ?? $c->estado),
             'fecha_registro'      => $dt($c->created_at),
             'dias_transcurridos'  => $c->fecha_llegada ? Carbon::parse($c->fecha_llegada)->diffInDays(now()) : 0,
-
-            // compat docs
-            'docs_enviados' => is_null($docs?->enviado) ? '' : ($docs->enviado ? 'Sí' : 'No'),
-            'fecha_envio'   => $date($docs?->fecha_envio),
-
-            // compat cot
-            'cotizacion_fecha_pago' => $date($cot?->fecha_pago),
-            'impuestos'    => $num($cot?->impuestos),
-            'honorarios'   => $num($cot?->honorarios),
-            'maniobras'    => $num($cot?->maniobras),
-            'almacenaje'   => $num($cot?->almacenaje),
-            'total_cotizacion' => $num($cot?->total ?? null),
-
-            // compat gastos
-            'gastos_generales_total' => $num($gastosGenerales->sum('monto')),
-            'gastos_liberacion_total'=> $num($gastosLiberacion->sum('monto')),
-            'total_gastos'           => $num($gastosAll->sum('monto')),
-
-            default => '',
+            default               => '',
         };
+    }
+
+    private function formatGastosDetalle($collection): string
+    {
+        if (!$collection || $collection->count() === 0) return '';
+
+        // "Descripción: $123.00; ..."
+        return $collection
+            ->map(function ($g) {
+                $desc = trim((string) ($g->descripcion ?? 'Gasto'));
+                $monto = (float) ($g->monto ?? 0);
+                return "{$desc}: $" . number_format($monto, 2);
+            })
+            ->values()
+            ->implode("; ");
     }
 
     public function styles(Worksheet $sheet)
@@ -244,11 +242,15 @@ class ReporteExport implements FromCollection, WithHeadings, WithMapping, Should
                 $sheet->getStyle($dataRange)->getAlignment()->setVertical('center');
                 $sheet->getStyle($dataRange)->getAlignment()->setWrapText(true);
 
-                // ✅ Formato moneda automático para columnas cuyo key sea de dinero
-                $moneyKeys = ['impuestos','honorarios','maniobras','almacenaje','total','total_gastos','gastos_generales','gastos_liberacion','costo_liberacion','garantia','costos_demora','flete_maritimo'];
+                // Formato moneda automático
+                $moneyKeys = [
+                    'impuestos','honorarios','maniobras','almacenaje','total',
+                    'total_gastos','gastos_generales','gastos_liberacion',
+                    'costo_liberacion','garantia','costos_demora','flete_maritimo'
+                ];
+
                 foreach ($this->fields as $i => $key) {
                     $k = $key;
-                    // soporta "cotizacion.total" etc.
                     if (str_contains($k, '.')) $k = explode('.', $k, 2)[1];
 
                     if (in_array($k, $moneyKeys, true)) {

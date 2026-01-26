@@ -14,15 +14,26 @@ class Plantilla extends Model
         'nombre',
         'tipo',
         'descripcion',
-        'predeterminada',
+        'predefinida',   // ✅ esta es la que usa tu sistema
         'created_by',
     ];
 
     protected $casts = [
-        'predeterminada' => 'boolean',
+        'predefinida' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    // ✅ Compat: si en algún lado quedó "predeterminada", lo seguimos soportando
+    public function getPredeterminadaAttribute()
+    {
+        return (bool) ($this->predefinida ?? false);
+    }
+
+    public function setPredeterminadaAttribute($value)
+    {
+        $this->attributes['predefinida'] = (bool) $value;
+    }
 
     public function campos(): HasMany
     {
